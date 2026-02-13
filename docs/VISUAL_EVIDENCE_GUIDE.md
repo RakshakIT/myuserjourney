@@ -1,14 +1,12 @@
 # MyUserJourney: Visual Evidence Collection Guide
 
-## For Global Talent Visa Application (Digital Technology Route)
-
 **Version 1.0 | February 2026**
 
 ---
 
 ## Purpose
 
-This guide provides a structured checklist for collecting visual evidence (screenshots, recordings, and diagrams) to support a Global Talent Visa application. Each item explains what to capture and how to present it as evidence of innovation, technical leadership, and product impact.
+This guide provides a structured checklist for collecting visual evidence (screenshots, recordings, and diagrams) to demonstrate the platform's innovation, technical leadership, and product impact.
 
 ---
 
@@ -194,4 +192,4 @@ This guide provides a structured checklist for collecting visual evidence (scree
 
 ---
 
-*This guide supports the MyUserJourney Global Talent Visa application. All evidence should be collected from the live production platform at myuserjourney.co.uk.*
+*All evidence should be collected from the live production platform at myuserjourney.co.uk.*

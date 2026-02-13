@@ -3,7 +3,7 @@
 **Platform:** MyUserJourney -- AI-Powered Privacy-First Digital Analytics Platform
 **URL:** https://myuserjourney.co.uk
 **Date:** February 2026
-**Purpose:** UK Global Talent Visa Application -- Digital Technology Route (Tech Nation / UKRI Endorsement)
+**Purpose:** Digital Technology Innovation and Market Positioning
 
 ---
 
@@ -77,4 +77,4 @@ MyUserJourney advances the state of digital technology by demonstrating that:
 
 ## Formal Endorsement Statement
 
-MyUserJourney represents a genuine and significant innovation in digital technology. The platform addresses a documented market gap by combining AI-powered analytics, privacy-by-design architecture, content management, and marketing intelligence into a unified, self-hosted solution. Its technical architecture and approach to privacy-preserving AI analytics demonstrate innovation consistent with the criteria for the UK Global Talent Visa in Digital Technology, and position it as a meaningful contribution to both the UK's digital technology sector and the broader international technology ecosystem.
+MyUserJourney represents a genuine and significant innovation in digital technology. The platform addresses a documented market gap by combining AI-powered analytics, privacy-by-design architecture, content management, and marketing intelligence into a unified, self-hosted solution. Its technical architecture and approach to privacy-preserving AI analytics position it as a meaningful contribution to both the UK's digital technology sector and the broader international technology ecosystem.

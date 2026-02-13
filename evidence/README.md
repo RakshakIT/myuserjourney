@@ -1,8 +1,6 @@
 # Evidence Portfolio
 
-## For Global Talent Visa Application (Digital Technology Route)
-
-This folder contains supporting evidence for the MyUserJourney Global Talent Visa application. Organise materials into the subdirectories below.
+This folder contains supporting evidence for the MyUserJourney platform. Organise materials into the subdirectories below.
 
 ---
 

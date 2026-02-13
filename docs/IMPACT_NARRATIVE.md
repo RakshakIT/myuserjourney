@@ -3,7 +3,7 @@
 **Platform:** MyUserJourney -- AI-Powered Privacy-First Digital Analytics Platform
 **URL:** https://myuserjourney.co.uk
 **Date:** February 2026
-**Purpose:** UK Global Talent Visa Application -- Digital Technology Route
+**Purpose:** Platform Impact and Industry Contribution
 
 ---
 
