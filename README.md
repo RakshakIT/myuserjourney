@@ -4,6 +4,25 @@
 
 Live at: [https://myuserjourney.co.uk](https://myuserjourney.co.uk)
 
+### The Problem
+
+Businesses today face an impossible choice: use powerful analytics platforms that compromise user privacy and send data to third-party servers, or use privacy-focused alternatives that lack advanced features. Google Analytics 4 raises GDPR adequacy concerns with cross-border data transfers. Microsoft Clarity records sessions without granular consent. Amplitude and Mixpanel charge premium prices that exclude SMEs. None of them offer integrated AI insights, CMS, SEO auditing, and PPC management in a single self-hosted solution.
+
+### The Innovation
+
+MyUserJourney eliminates this trade-off by combining enterprise-grade analytics with AI-powered intelligence and full privacy compliance in a single, self-hosted platform. It is the first open-source solution to unify real-time behavioural analytics, predictive AI (churn risk, revenue forecasting, conversion predictions), automated UX auditing, natural language analytics queries, SEO site auditing, PPC campaign management, and a complete CMS — all while maintaining GDPR/PECR compliance by design, not as an afterthought.
+
+### Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Whitepaper](whitepaper.md) | Technical architecture, innovation approach, competitive analysis |
+| [Impact Narrative](docs/IMPACT_NARRATIVE.md) | Global impact and real-world problem solving |
+| [Leadership Proof](docs/LEADERSHIP_PROOF.md) | Product leadership and innovation ownership |
+| [Global Relevance](docs/GLOBAL_RELEVANCE.md) | Worldwide applicability and market potential |
+| [Innovation Statement](docs/INNOVATION_STATEMENT.md) | Competitive positioning and differentiation |
+| [Visual Evidence Guide](docs/VISUAL_EVIDENCE_GUIDE.md) | Screenshot and evidence collection checklist |
+
 ---
 
 ## Table of Contents
@@ -601,6 +620,18 @@ curl -X POST http://localhost:5000/api/public/contact \
 - **HTTPS**: In production (`NODE_ENV=production`), cookies are set with the `secure` flag, requiring HTTPS. Always deploy behind an SSL-terminating reverse proxy.
 - **Password Hashing**: All passwords are hashed with bcrypt using 12 salt rounds (exceeds OWASP minimum).
 - **Input Validation**: All API inputs are validated with Zod schemas before processing.
+
+---
+
+## Future Roadmap
+
+| Phase | Timeline | Features |
+|-------|----------|----------|
+| **v1.1** | Q2 2026 | Heatmaps, scroll depth tracking, A/B testing framework |
+| **v1.2** | Q3 2026 | Multi-tenant SaaS mode, team collaboration, role-based dashboards |
+| **v1.3** | Q4 2026 | Real-time alerting engine, anomaly detection, webhook integrations |
+| **v2.0** | Q1 2027 | Mobile SDK (iOS/Android), server-side tracking, data warehouse connectors |
+| **v2.1** | Q2 2027 | White-label reseller programme, API marketplace, plugin architecture |
 
 ---
 
