@@ -1,0 +1,26 @@
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="fg1" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0a2463"/>
+      <stop offset="100%" stop-color="#00b4d8"/>
+    </linearGradient>
+    <linearGradient id="fg2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#48cae4"/>
+      <stop offset="100%" stop-color="#0077b6"/>
+    </linearGradient>
+    <filter id="fg">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <circle cx="18" cy="78" r="11" fill="url(#fg1)"/>
+  <circle cx="42" cy="55" r="9" fill="url(#fg2)"/>
+  <circle cx="62" cy="35" r="10" fill="url(#fg1)"/>
+  <path d="M26 72 L36 59" stroke="url(#fg2)" stroke-width="5" stroke-linecap="round"/>
+  <path d="M48 50 L56 40" stroke="url(#fg1)" stroke-width="5" stroke-linecap="round"/>
+  <path d="M68 28 L86 8" stroke="url(#fg2)" stroke-width="6" stroke-linecap="round" filter="url(#fg)"/>
+  <path d="M78 5 L89 5 L89 16" stroke="url(#fg2)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" filter="url(#fg)"/>
+</svg>
