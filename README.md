@@ -623,6 +623,39 @@ curl -X POST http://localhost:5000/api/public/contact \
 
 ---
 
+## Traction and Validation
+
+| Metric | Status |
+|--------|--------|
+| **GitHub Stars** | Tracking adoption and community interest |
+| **Live Deployment** | Production at [myuserjourney.co.uk](https://myuserjourney.co.uk) with SSL |
+| **Users Onboarded** | Active admin and user accounts in production |
+| **Beta Testing** | Internal testing across analytics, CMS, AI, and compliance features |
+| **Database Architecture** | 27 production tables with full relational integrity |
+| **API Endpoints** | 50+ RESTful endpoints covering analytics, CMS, AI, privacy, and admin |
+| **GDPR Compliance** | Full UK GDPR, UK PECR, EU GDPR, and EU ePrivacy Directive compliance |
+| **AI Features Shipped** | Predictive analytics, UX auditor, marketing copilot, NLP insights |
+| **Performance** | Sub-second API response times, real-time event processing, optimised PostgreSQL queries |
+| **Code Quality** | End-to-end TypeScript, Zod validation, Drizzle ORM type safety, bcrypt authentication |
+
+---
+
+## Evidence Portfolio
+
+Supporting evidence for the platform's capabilities is organised in the [`evidence/`](evidence/) directory:
+
+```
+evidence/
+  screenshots/       Platform UI screenshots (dashboard, AI, admin, privacy)
+  whitepaper/         Exported whitepaper and technical documents (PDF)
+  architecture/      System diagrams, schema visuals, data flow charts
+  demo-videos/       Screen recordings of platform functionality
+```
+
+Refer to the [Visual Evidence Guide](docs/VISUAL_EVIDENCE_GUIDE.md) for a detailed checklist of what to capture and how to present each item.
+
+---
+
 ## Future Roadmap
 
 | Phase | Timeline | Features |
