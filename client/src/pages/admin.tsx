@@ -14,7 +14,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
   Shield, Users, Settings, Save, Trash2, Plus, Mail, FileText,
-  Upload, Copy, Globe, MessageSquare, Image, File, Loader2, Send, Eye, Code
+  Upload, Copy, Globe, MessageSquare, Image, File, Loader2, Send, Eye, Code, CreditCard
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
@@ -1429,6 +1429,224 @@ function TrackingCodesTab() {
   );
 }
 
+interface PaymentSettingsData {
+  id?: string;
+  provider: string;
+  stripePublishableKey: string;
+  stripeSecretKey: string;
+  stripeWebhookSecret: string;
+  paypalClientId: string;
+  paypalSecretKey: string;
+  isActive: boolean;
+}
+
+function PaymentGatewaysTab() {
+  const { toast } = useToast();
+  const { data: settings, isLoading } = useQuery<PaymentSettingsData>({
+    queryKey: ["/api/admin/payment-settings"],
+  });
+
+  const [paymentData, setPaymentData] = useState<PaymentSettingsData>({
+    provider: "stripe",
+    stripePublishableKey: "",
+    stripeSecretKey: "",
+    stripeWebhookSecret: "",
+    paypalClientId: "",
+    paypalSecretKey: "",
+    isActive: false,
+  });
+
+  const [showStripeSecret, setShowStripeSecret] = useState(false);
+  const [showPaypalSecret, setShowPaypalSecret] = useState(false);
+  const [showWebhookSecret, setShowWebhookSecret] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+
+  if (settings && !initialized) {
+    setPaymentData({
+      provider: settings.provider || "stripe",
+      stripePublishableKey: settings.stripePublishableKey || "",
+      stripeSecretKey: settings.stripeSecretKey || "",
+      stripeWebhookSecret: settings.stripeWebhookSecret || "",
+      paypalClientId: settings.paypalClientId || "",
+      paypalSecretKey: settings.paypalSecretKey || "",
+      isActive: settings.isActive || false,
+    });
+    setInitialized(true);
+  }
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: PaymentSettingsData) => {
+      await apiRequest("PUT", "/api/admin/payment-settings", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/payment-settings"] });
+      toast({ title: "Payment settings saved successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to save payment settings", variant: "destructive" });
+    },
+  });
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Payment Gateway Configuration
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center gap-4">
+            <Label>Enable Payment Processing</Label>
+            <Switch
+              checked={paymentData.isActive}
+              onCheckedChange={(checked) => setPaymentData({ ...paymentData, isActive: checked })}
+              data-testid="switch-payment-active"
+            />
+            <Badge variant={paymentData.isActive ? "default" : "secondary"}>
+              {paymentData.isActive ? "Active" : "Inactive"}
+            </Badge>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Payment Provider</Label>
+            <Select
+              value={paymentData.provider}
+              onValueChange={(value) => setPaymentData({ ...paymentData, provider: value })}
+            >
+              <SelectTrigger data-testid="select-payment-provider">
+                <SelectValue placeholder="Select provider" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="stripe">Stripe</SelectItem>
+                <SelectItem value="paypal">PayPal</SelectItem>
+                <SelectItem value="both">Both (Stripe + PayPal)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {(paymentData.provider === "stripe" || paymentData.provider === "both") && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Stripe Configuration</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Publishable Key</Label>
+                  <Input
+                    value={paymentData.stripePublishableKey}
+                    onChange={(e) => setPaymentData({ ...paymentData, stripePublishableKey: e.target.value })}
+                    placeholder="pk_live_..."
+                    data-testid="input-stripe-publishable-key"
+                  />
+                  <p className="text-xs text-muted-foreground">Your Stripe publishable key (starts with pk_live_ or pk_test_)</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Secret Key</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type={showStripeSecret ? "text" : "password"}
+                      value={paymentData.stripeSecretKey}
+                      onChange={(e) => setPaymentData({ ...paymentData, stripeSecretKey: e.target.value })}
+                      placeholder="sk_live_..."
+                      data-testid="input-stripe-secret-key"
+                    />
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => setShowStripeSecret(!showStripeSecret)}
+                      data-testid="button-toggle-stripe-secret"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Your Stripe secret key (starts with sk_live_ or sk_test_)</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Webhook Secret</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type={showWebhookSecret ? "text" : "password"}
+                      value={paymentData.stripeWebhookSecret}
+                      onChange={(e) => setPaymentData({ ...paymentData, stripeWebhookSecret: e.target.value })}
+                      placeholder="whsec_..."
+                      data-testid="input-stripe-webhook-secret"
+                    />
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => setShowWebhookSecret(!showWebhookSecret)}
+                      data-testid="button-toggle-webhook-secret"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Used to verify webhook events from Stripe (starts with whsec_)</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {(paymentData.provider === "paypal" || paymentData.provider === "both") && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">PayPal Configuration</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Client ID</Label>
+                  <Input
+                    value={paymentData.paypalClientId}
+                    onChange={(e) => setPaymentData({ ...paymentData, paypalClientId: e.target.value })}
+                    placeholder="PayPal Client ID"
+                    data-testid="input-paypal-client-id"
+                  />
+                  <p className="text-xs text-muted-foreground">Your PayPal REST API Client ID</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Secret Key</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type={showPaypalSecret ? "text" : "password"}
+                      value={paymentData.paypalSecretKey}
+                      onChange={(e) => setPaymentData({ ...paymentData, paypalSecretKey: e.target.value })}
+                      placeholder="PayPal Secret Key"
+                      data-testid="input-paypal-secret-key"
+                    />
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => setShowPaypalSecret(!showPaypalSecret)}
+                      data-testid="button-toggle-paypal-secret"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Your PayPal REST API Secret Key</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <Button
+            onClick={() => saveMutation.mutate(paymentData)}
+            disabled={saveMutation.isPending}
+            data-testid="button-save-payment-settings"
+          >
+            {saveMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+            Save Payment Settings
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const { user } = useAuth();
 
@@ -1475,6 +1693,9 @@ export default function AdminPage() {
           <TabsTrigger value="tracking" data-testid="tab-tracking">
             <Code className="h-4 w-4 mr-1" /> Tracking Codes
           </TabsTrigger>
+          <TabsTrigger value="payments" data-testid="tab-payments">
+            <CreditCard className="h-4 w-4 mr-1" /> Payment Gateways
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="site-settings" className="mt-4">
           <SiteSettingsTab />
@@ -1496,6 +1717,9 @@ export default function AdminPage() {
         </TabsContent>
         <TabsContent value="tracking" className="mt-4">
           <TrackingCodesTab />
+        </TabsContent>
+        <TabsContent value="payments" className="mt-4">
+          <PaymentGatewaysTab />
         </TabsContent>
       </Tabs>
     </div>
