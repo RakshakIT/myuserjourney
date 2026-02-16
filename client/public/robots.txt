@@ -1,0 +1,35 @@
+User-agent: *
+Allow: /
+
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /projects
+Disallow: /admin
+Disallow: /settings
+Disallow: /usage
+Disallow: /realtime
+Disallow: /acquisition
+Disallow: /engagement
+Disallow: /events
+Disallow: /visitors
+Disallow: /traffic-sources
+Disallow: /pages-analysis
+Disallow: /geography
+Disallow: /browsers
+Disallow: /funnels
+Disallow: /journeys
+Disallow: /custom-reports
+Disallow: /live-events
+Disallow: /site-audit
+Disallow: /seo
+Disallow: /ppc
+Disallow: /ai-insights
+Disallow: /predictive
+Disallow: /ux-auditor
+Disallow: /marketing-copilot
+Disallow: /funnel-builder
+Disallow: /privacy-settings
+Disallow: /tracking-code
+Disallow: /reset-password
+
+Sitemap: https://myuserjourney.co.uk/sitemap.xml
