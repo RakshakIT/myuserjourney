@@ -3546,13 +3546,13 @@ export async function registerRoutes(
   app.post("/api/ai/chat", requireAuth, async (req, res) => {
     try {
       const { prompt, pageContext, projectId } = req.body;
+      const user = req.user as any;
       if (!prompt) return res.status(400).json({ message: "Prompt is required" });
 
       const contextDesc = aiPageContexts[pageContext] || "You are an analytics assistant.";
       let dataContext = "";
       if (projectId) {
         try {
-          const user = req.user as any;
           const project = await storage.getProject(projectId);
           if (project && (user.role === "admin" || project.userId === user.id)) {
             const analytics = await storage.getAnalyticsSummary(projectId);
