@@ -37,6 +37,8 @@ import {
   BrainCircuit,
   Gauge,
   Wand2,
+  GraduationCap,
+  Award,
 } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import {
@@ -146,6 +148,11 @@ const aiItems: NavItem[] = [
   { title: "Predictive Analytics", url: "/predictive-analytics", icon: BrainCircuit },
   { title: "UX Auditor", url: "/ux-auditor", icon: Gauge },
   { title: "Marketing Copilot", url: "/marketing-copilot", icon: Wand2 },
+];
+
+const learningItems: NavItem[] = [
+  { title: "Knowledge Center", url: "/knowledge", icon: GraduationCap },
+  { title: "My Badges", url: "/knowledge?tab=badges", icon: Award },
 ];
 
 const adminItems: NavItem[] = [
@@ -275,6 +282,7 @@ export function AppSidebar() {
         <NavGroup label="Explorations" items={explorationItems} location={location} />
         <NavGroup label="Marketing & SEO" items={marketingItems} location={location} />
         <NavGroup label="AI" items={aiItems} location={location} />
+        <NavGroup label="Learning" items={learningItems} location={location} />
         <NavGroup label="Admin" items={user?.role === "admin" ? adminItems : adminItems.filter(i => i.url !== "/admin")} location={location} />
       </SidebarContent>
 

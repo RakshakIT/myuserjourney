@@ -52,6 +52,7 @@ import PredictiveAnalyticsPage from "@/pages/predictive-analytics";
 import UxAuditorPage from "@/pages/ux-auditor";
 import MarketingCopilotPage from "@/pages/marketing-copilot";
 import UsagePage from "@/pages/usage";
+import KnowledgeCenterPage from "@/pages/knowledge";
 import { FloatingAIAssistant } from "@/components/floating-ai-assistant";
 import UseCasesPage from "@/pages/public/use-cases";
 import PricingPublicPage from "@/pages/public/pricing";
@@ -61,10 +62,13 @@ import StartGuidePage from "@/pages/public/start-guide";
 import DocsPage from "@/pages/public/docs";
 import DocArticlePage from "@/pages/public/doc-article";
 import BlogPage from "@/pages/public/blog";
+import BlogPostPage from "@/pages/public/blog-post";
 import HelpCenterPage from "@/pages/public/help-center";
 import CapabilitiesPage from "@/pages/public/capabilities";
 import GuidesPage from "@/pages/public/guides";
+import GuideDetailPage from "@/pages/public/guide-detail";
 import CaseStudiesPage from "@/pages/public/case-studies";
+import CaseStudyDetailPage from "@/pages/public/case-study-detail";
 import SecurityPublicPage from "@/pages/public/security-page";
 import TrustCenterPage from "@/pages/public/trust-center";
 import TermsPage from "@/pages/public/terms";
@@ -72,6 +76,9 @@ import PrivacyPolicyPage from "@/pages/public/privacy-policy";
 import CmsPage from "@/pages/cms-page";
 import ContactPage from "@/pages/contact";
 import ResetPasswordPage from "@/pages/reset-password";
+import CommunityForumPage from "@/pages/public/community-forum";
+import CommunityIdeasPage from "@/pages/public/community-ideas";
+import HelpArticlePage from "@/pages/public/help-article";
 
 function AppRouter() {
   return (
@@ -115,6 +122,7 @@ function AppRouter() {
       <Route path="/project-settings" component={ProjectSettingsPage} />
       <Route path="/integrations" component={IntegrationsPage} />
       <Route path="/usage" component={UsagePage} />
+      <Route path="/knowledge" component={KnowledgeCenterPage} />
       <Route path="/admin" component={AdminPage} />
       <Route component={NotFound} />
     </Switch>
@@ -192,15 +200,21 @@ function PublicRoutes() {
       <Route path="/use-cases" component={UseCasesPage} />
       <Route path="/pricing" component={PricingPublicPage} />
       <Route path="/community" component={CommunityPage} />
+      <Route path="/community/forum" component={CommunityForumPage} />
+      <Route path="/community/ideas" component={CommunityIdeasPage} />
       <Route path="/connectors" component={ConnectorsPublicPage} />
       <Route path="/start-guide" component={StartGuidePage} />
       <Route path="/docs" component={DocsPage} />
       <Route path="/docs/:slug" component={DocArticlePage} />
       <Route path="/blog" component={BlogPage} />
+      <Route path="/blog/:slug" component={BlogPostPage} />
       <Route path="/help-center" component={HelpCenterPage} />
+      <Route path="/help-center/:slug" component={HelpArticlePage} />
       <Route path="/capabilities" component={CapabilitiesPage} />
       <Route path="/guides" component={GuidesPage} />
+      <Route path="/guides/:slug" component={GuideDetailPage} />
       <Route path="/case-studies" component={CaseStudiesPage} />
+      <Route path="/case-studies/:slug" component={CaseStudyDetailPage} />
       <Route path="/security" component={SecurityPublicPage} />
       <Route path="/trust-center" component={TrustCenterPage} />
       <Route path="/terms" component={TermsPage} />

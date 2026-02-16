@@ -3,6 +3,7 @@ import { SEOHead, seoData } from "@/components/seo-head";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "wouter";
 import {
   Shield,
   Lock,
@@ -124,15 +125,17 @@ export default function SecurityPage() {
             Contact our team for detailed information about our security practices and compliance certifications.
           </p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
-            <Button data-testid="button-contact-security">
-              Contact Security Team
-            </Button>
-            <Button variant="outline" data-testid="button-trust-center">
-              <a href="/trust-center" className="flex items-center gap-2">
+            <Link href="/contact">
+              <Button data-testid="button-contact-security">
+                Contact Security Team
+              </Button>
+            </Link>
+            <Link href="/trust-center">
+              <Button variant="outline" data-testid="button-trust-center" className="flex items-center gap-2">
                 Visit Trust Center
                 <ArrowRight className="h-4 w-4" />
-              </a>
-            </Button>
+              </Button>
+            </Link>
           </div>
         </div>
       </section>

@@ -28,6 +28,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { FeatureGuide, GUIDE_CONFIGS } from "@/components/feature-guide";
 
 interface Message {
   role: "user" | "assistant";
@@ -189,6 +190,9 @@ export default function AiInsights() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-49px)]">
+      <div className="px-6 pt-5">
+        <FeatureGuide {...GUIDE_CONFIGS.ai} />
+      </div>
       <div className="px-6 pt-5 pb-3">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">

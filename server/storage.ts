@@ -89,6 +89,30 @@ import {
   type InsertStripeCustomer,
   type Invoice,
   type InsertInvoice,
+  quizTopics,
+  quizQuestions,
+  quizAttempts,
+  badges,
+  userBadges,
+  type QuizTopic,
+  type QuizQuestion,
+  type QuizAttempt,
+  type InsertQuizAttempt,
+  type Badge,
+  type UserBadge,
+  type InsertUserBadge,
+  blogPosts,
+  guidesContent,
+  caseStudiesContent,
+  helpArticles,
+  type BlogPost,
+  type InsertBlogPost,
+  type Guide,
+  type InsertGuide,
+  type CaseStudy,
+  type InsertCaseStudy,
+  type HelpArticle,
+  type InsertHelpArticle,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -232,6 +256,43 @@ export interface IStorage {
   getInvoices(userId: string): Promise<Invoice[]>;
   createInvoice(data: InsertInvoice): Promise<Invoice>;
   updateInvoice(id: string, data: Partial<Invoice>): Promise<Invoice>;
+
+  getQuizTopics(): Promise<QuizTopic[]>;
+  getQuizQuestions(topicId: string): Promise<QuizQuestion[]>;
+  getQuizAttempts(userId: string): Promise<QuizAttempt[]>;
+  createQuizAttempt(data: InsertQuizAttempt): Promise<QuizAttempt>;
+  getBadges(): Promise<Badge[]>;
+  getUserBadges(userId: string): Promise<(UserBadge & { badge: Badge })[]>;
+  awardBadge(data: InsertUserBadge): Promise<UserBadge>;
+  hasUserBadge(userId: string, badgeId: string): Promise<boolean>;
+
+  getBlogPosts(publishedOnly?: boolean): Promise<BlogPost[]>;
+  getBlogPost(id: string): Promise<BlogPost | undefined>;
+  getBlogPostBySlug(slug: string): Promise<BlogPost | undefined>;
+  createBlogPost(post: InsertBlogPost): Promise<BlogPost>;
+  updateBlogPost(id: string, data: Partial<InsertBlogPost>): Promise<BlogPost>;
+  deleteBlogPost(id: string): Promise<void>;
+
+  getGuides(publishedOnly?: boolean): Promise<Guide[]>;
+  getGuide(id: string): Promise<Guide | undefined>;
+  getGuideBySlug(slug: string): Promise<Guide | undefined>;
+  createGuide(guide: InsertGuide): Promise<Guide>;
+  updateGuide(id: string, data: Partial<InsertGuide>): Promise<Guide>;
+  deleteGuide(id: string): Promise<void>;
+
+  getCaseStudies(publishedOnly?: boolean): Promise<CaseStudy[]>;
+  getCaseStudy(id: string): Promise<CaseStudy | undefined>;
+  getCaseStudyBySlug(slug: string): Promise<CaseStudy | undefined>;
+  createCaseStudy(cs: InsertCaseStudy): Promise<CaseStudy>;
+  updateCaseStudy(id: string, data: Partial<InsertCaseStudy>): Promise<CaseStudy>;
+  deleteCaseStudy(id: string): Promise<void>;
+
+  getHelpArticles(publishedOnly?: boolean): Promise<HelpArticle[]>;
+  getHelpArticle(id: string): Promise<HelpArticle | undefined>;
+  getHelpArticleBySlug(slug: string): Promise<HelpArticle | undefined>;
+  createHelpArticle(article: InsertHelpArticle): Promise<HelpArticle>;
+  updateHelpArticle(id: string, data: Partial<InsertHelpArticle>): Promise<HelpArticle>;
+  deleteHelpArticle(id: string): Promise<void>;
 }
 
 export interface EventFilters {
@@ -1037,6 +1098,151 @@ export class DatabaseStorage implements IStorage {
   async updateInvoice(id: string, data: Partial<Invoice>): Promise<Invoice> {
     const [updated] = await db.update(invoices).set(data).where(eq(invoices.id, id)).returning();
     return updated;
+  }
+
+  async getQuizTopics(): Promise<QuizTopic[]> {
+    return db.select().from(quizTopics).orderBy(quizTopics.sortOrder);
+  }
+
+  async getQuizQuestions(topicId: string): Promise<QuizQuestion[]> {
+    return db.select().from(quizQuestions).where(eq(quizQuestions.topicId, topicId)).orderBy(quizQuestions.sortOrder);
+  }
+
+  async getQuizAttempts(userId: string): Promise<QuizAttempt[]> {
+    return db.select().from(quizAttempts).where(eq(quizAttempts.userId, userId)).orderBy(desc(quizAttempts.completedAt));
+  }
+
+  async createQuizAttempt(data: InsertQuizAttempt): Promise<QuizAttempt> {
+    const [created] = await db.insert(quizAttempts).values(data).returning();
+    return created;
+  }
+
+  async getBadges(): Promise<Badge[]> {
+    return db.select().from(badges).orderBy(badges.sortOrder);
+  }
+
+  async getUserBadges(userId: string): Promise<(UserBadge & { badge: Badge })[]> {
+    const results = await db
+      .select()
+      .from(userBadges)
+      .innerJoin(badges, eq(userBadges.badgeId, badges.id))
+      .where(eq(userBadges.userId, userId))
+      .orderBy(desc(userBadges.earnedAt));
+    return results.map(r => ({ ...r.user_badges, badge: r.badges }));
+  }
+
+  async awardBadge(data: InsertUserBadge): Promise<UserBadge> {
+    const [created] = await db.insert(userBadges).values(data).returning();
+    return created;
+  }
+
+  async hasUserBadge(userId: string, badgeId: string): Promise<boolean> {
+    const [existing] = await db.select().from(userBadges).where(and(eq(userBadges.userId, userId), eq(userBadges.badgeId, badgeId)));
+    return !!existing;
+  }
+
+  async getBlogPosts(publishedOnly = false): Promise<BlogPost[]> {
+    if (publishedOnly) {
+      return db.select().from(blogPosts).where(eq(blogPosts.status, "published")).orderBy(desc(blogPosts.createdAt));
+    }
+    return db.select().from(blogPosts).orderBy(desc(blogPosts.createdAt));
+  }
+  async getBlogPost(id: string): Promise<BlogPost | undefined> {
+    const [post] = await db.select().from(blogPosts).where(eq(blogPosts.id, id));
+    return post;
+  }
+  async getBlogPostBySlug(slug: string): Promise<BlogPost | undefined> {
+    const [post] = await db.select().from(blogPosts).where(eq(blogPosts.slug, slug));
+    return post;
+  }
+  async createBlogPost(post: InsertBlogPost): Promise<BlogPost> {
+    const [created] = await db.insert(blogPosts).values(post).returning();
+    return created;
+  }
+  async updateBlogPost(id: string, data: Partial<InsertBlogPost>): Promise<BlogPost> {
+    const [updated] = await db.update(blogPosts).set({ ...data, updatedAt: new Date() }).where(eq(blogPosts.id, id)).returning();
+    return updated;
+  }
+  async deleteBlogPost(id: string): Promise<void> {
+    await db.delete(blogPosts).where(eq(blogPosts.id, id));
+  }
+
+  async getGuides(publishedOnly = false): Promise<Guide[]> {
+    if (publishedOnly) {
+      return db.select().from(guidesContent).where(eq(guidesContent.status, "published")).orderBy(guidesContent.sortOrder);
+    }
+    return db.select().from(guidesContent).orderBy(guidesContent.sortOrder);
+  }
+  async getGuide(id: string): Promise<Guide | undefined> {
+    const [guide] = await db.select().from(guidesContent).where(eq(guidesContent.id, id));
+    return guide;
+  }
+  async getGuideBySlug(slug: string): Promise<Guide | undefined> {
+    const [guide] = await db.select().from(guidesContent).where(eq(guidesContent.slug, slug));
+    return guide;
+  }
+  async createGuide(guide: InsertGuide): Promise<Guide> {
+    const [created] = await db.insert(guidesContent).values(guide).returning();
+    return created;
+  }
+  async updateGuide(id: string, data: Partial<InsertGuide>): Promise<Guide> {
+    const [updated] = await db.update(guidesContent).set({ ...data, updatedAt: new Date() }).where(eq(guidesContent.id, id)).returning();
+    return updated;
+  }
+  async deleteGuide(id: string): Promise<void> {
+    await db.delete(guidesContent).where(eq(guidesContent.id, id));
+  }
+
+  async getCaseStudies(publishedOnly = false): Promise<CaseStudy[]> {
+    if (publishedOnly) {
+      return db.select().from(caseStudiesContent).where(eq(caseStudiesContent.status, "published")).orderBy(desc(caseStudiesContent.createdAt));
+    }
+    return db.select().from(caseStudiesContent).orderBy(desc(caseStudiesContent.createdAt));
+  }
+  async getCaseStudy(id: string): Promise<CaseStudy | undefined> {
+    const [cs] = await db.select().from(caseStudiesContent).where(eq(caseStudiesContent.id, id));
+    return cs;
+  }
+  async getCaseStudyBySlug(slug: string): Promise<CaseStudy | undefined> {
+    const [cs] = await db.select().from(caseStudiesContent).where(eq(caseStudiesContent.slug, slug));
+    return cs;
+  }
+  async createCaseStudy(cs: InsertCaseStudy): Promise<CaseStudy> {
+    const [created] = await db.insert(caseStudiesContent).values(cs).returning();
+    return created;
+  }
+  async updateCaseStudy(id: string, data: Partial<InsertCaseStudy>): Promise<CaseStudy> {
+    const [updated] = await db.update(caseStudiesContent).set({ ...data, updatedAt: new Date() }).where(eq(caseStudiesContent.id, id)).returning();
+    return updated;
+  }
+  async deleteCaseStudy(id: string): Promise<void> {
+    await db.delete(caseStudiesContent).where(eq(caseStudiesContent.id, id));
+  }
+
+  async getHelpArticles(publishedOnly = false): Promise<HelpArticle[]> {
+    if (publishedOnly) {
+      return db.select().from(helpArticles).where(eq(helpArticles.status, "published")).orderBy(helpArticles.sortOrder);
+    }
+    return db.select().from(helpArticles).orderBy(helpArticles.sortOrder);
+  }
+  async getHelpArticle(id: string): Promise<HelpArticle | undefined> {
+    const [article] = await db.select().from(helpArticles).where(eq(helpArticles.id, id));
+    return article;
+  }
+  async getHelpArticleBySlug(slug: string): Promise<HelpArticle | undefined> {
+    const [article] = await db.select().from(helpArticles).where(eq(helpArticles.slug, slug));
+    return article;
+  }
+  async createHelpArticle(article: InsertHelpArticle): Promise<HelpArticle> {
+    const [created] = await db.insert(helpArticles).values(article).returning();
+    return created;
+  }
+  async updateHelpArticle(id: string, data: Partial<InsertHelpArticle>): Promise<HelpArticle> {
+    const [updated] = await db.update(helpArticles).set({ ...data, updatedAt: new Date() }).where(eq(helpArticles.id, id)).returning();
+    return updated;
+  }
+  async deleteHelpArticle(id: string): Promise<void> {
+    await db.delete(helpArticles).where(eq(helpArticles.id, id));
   }
 }
 

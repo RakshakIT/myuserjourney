@@ -48,6 +48,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ExportMenu } from "@/components/export-menu";
+import { FeatureGuide, GUIDE_CONFIGS } from "@/components/feature-guide";
 
 const CHART_COLORS = [
   "hsl(217, 91%, 35%)",
@@ -128,10 +129,10 @@ function StatCard({
 }) {
   return (
     <Card>
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-2 flex-wrap">
-          <div className="space-y-1.5">
-            <p className="text-sm text-muted-foreground">{title}</p>
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
             <p className="text-2xl font-bold tracking-tight" data-testid={`stat-value-${title.toLowerCase().replace(/\s/g, '-')}`}>{value}</p>
             {change !== null && (
               <div className="flex items-center gap-1">
@@ -158,8 +159,8 @@ function StatCard({
               </div>
             )}
           </div>
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10">
-            <Icon className="h-4 w-4 text-primary" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+            <Icon className="h-5 w-5 text-primary" />
           </div>
         </div>
       </CardContent>
@@ -235,6 +236,7 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 space-y-6">
+      <FeatureGuide {...GUIDE_CONFIGS.dashboard} />
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold tracking-tight" data-testid="text-dashboard-title">

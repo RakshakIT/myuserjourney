@@ -713,6 +713,43 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/users", requireAdmin, async (req, res) => {
+    try {
+      const { email, password, username, role } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+      if (password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+      const existing = await storage.getUserByEmail(email);
+      if (existing) {
+        return res.status(400).json({ message: "A user with this email already exists" });
+      }
+      const bcrypt = await import("bcryptjs");
+      const hashedPassword = await bcrypt.hash(password, 12);
+      let finalUsername = username || email.split("@")[0];
+      let uniqueUsername = finalUsername;
+      let counter = 1;
+      while (await storage.getUserByUsername(uniqueUsername)) {
+        uniqueUsername = `${finalUsername}${counter}`;
+        counter++;
+      }
+      const user = await storage.createUser({
+        username: uniqueUsername,
+        email,
+        password: hashedPassword,
+      });
+      if (role && role !== "user") {
+        await storage.updateUser(user.id, { role });
+      }
+      const { password: _, ...safeUser } = user;
+      res.status(201).json(safeUser);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.patch("/api/admin/users/:id", requireAdmin, async (req, res) => {
     try {
       const { role, subscriptionTier, subscriptionStatus } = req.body;
@@ -883,6 +920,108 @@ export async function registerRoutes(
     try {
       await storage.deleteCmsPage(String(req.params.id));
       res.json({ message: "Page deleted" });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Blog Posts Admin CRUD
+  app.get("/api/admin/blog-posts", requireAdmin, async (_req, res) => {
+    try {
+      const posts = await storage.getBlogPosts();
+      res.json(posts);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+  app.post("/api/admin/blog-posts", requireAdmin, async (req, res) => {
+    try {
+      const post = await storage.createBlogPost(req.body);
+      res.status(201).json(post);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+  app.patch("/api/admin/blog-posts/:id", requireAdmin, async (req, res) => {
+    try {
+      const post = await storage.updateBlogPost(String(req.params.id), req.body);
+      res.json(post);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+  app.delete("/api/admin/blog-posts/:id", requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteBlogPost(String(req.params.id));
+      res.json({ message: "Blog post deleted" });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Guides Admin CRUD
+  app.get("/api/admin/guides", requireAdmin, async (_req, res) => {
+    try {
+      const guides = await storage.getGuides();
+      res.json(guides);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+  app.post("/api/admin/guides", requireAdmin, async (req, res) => {
+    try {
+      const guide = await storage.createGuide(req.body);
+      res.status(201).json(guide);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+  app.patch("/api/admin/guides/:id", requireAdmin, async (req, res) => {
+    try {
+      const guide = await storage.updateGuide(String(req.params.id), req.body);
+      res.json(guide);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+  app.delete("/api/admin/guides/:id", requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteGuide(String(req.params.id));
+      res.json({ message: "Guide deleted" });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Case Studies Admin CRUD
+  app.get("/api/admin/case-studies", requireAdmin, async (_req, res) => {
+    try {
+      const studies = await storage.getCaseStudies();
+      res.json(studies);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+  app.post("/api/admin/case-studies", requireAdmin, async (req, res) => {
+    try {
+      const study = await storage.createCaseStudy(req.body);
+      res.status(201).json(study);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+  app.patch("/api/admin/case-studies/:id", requireAdmin, async (req, res) => {
+    try {
+      const study = await storage.updateCaseStudy(String(req.params.id), req.body);
+      res.json(study);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+  app.delete("/api/admin/case-studies/:id", requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteCaseStudy(String(req.params.id));
+      res.json({ message: "Case study deleted" });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -1083,6 +1222,82 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Page not found" });
       }
       res.json(page);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Public Blog Posts
+  app.get("/api/public/blog-posts", async (_req, res) => {
+    try {
+      const posts = await storage.getBlogPosts(true);
+      res.json(posts);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+  app.get("/api/public/blog-posts/:slug", async (req, res) => {
+    try {
+      const post = await storage.getBlogPostBySlug(String(req.params.slug));
+      if (!post || post.status !== "published") return res.status(404).json({ message: "Post not found" });
+      res.json(post);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Public Guides
+  app.get("/api/public/guides", async (_req, res) => {
+    try {
+      const guides = await storage.getGuides(true);
+      res.json(guides);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+  app.get("/api/public/guides/:slug", async (req, res) => {
+    try {
+      const guide = await storage.getGuideBySlug(String(req.params.slug));
+      if (!guide || guide.status !== "published") return res.status(404).json({ message: "Guide not found" });
+      res.json(guide);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Public Case Studies
+  app.get("/api/public/case-studies", async (_req, res) => {
+    try {
+      const studies = await storage.getCaseStudies(true);
+      res.json(studies);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+  app.get("/api/public/case-studies/:slug", async (req, res) => {
+    try {
+      const study = await storage.getCaseStudyBySlug(String(req.params.slug));
+      if (!study || study.status !== "published") return res.status(404).json({ message: "Case study not found" });
+      res.json(study);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Public Help Articles
+  app.get("/api/public/help-articles", async (_req, res) => {
+    try {
+      const articles = await storage.getHelpArticles(true);
+      res.json(articles);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+  app.get("/api/public/help-articles/:slug", async (req, res) => {
+    try {
+      const article = await storage.getHelpArticleBySlug(String(req.params.slug));
+      if (!article || article.status !== "published") return res.status(404).json({ message: "Article not found" });
+      res.json(article);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -4093,6 +4308,134 @@ Provide realistic, data-driven estimates. Include at least 15 organic keywords, 
     res.setHeader("Cache-Control", "public, max-age=3600");
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.send(getSnippetJs());
+  });
+
+  // Knowledge Center - Quiz & Badge API routes
+  app.get("/api/quiz/topics", async (_req, res) => {
+    try {
+      const topics = await storage.getQuizTopics();
+      res.json(topics);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/quiz/topics/:topicId/questions", async (req, res) => {
+    try {
+      const questions = await storage.getQuizQuestions(req.params.topicId);
+      const sanitized = questions.map(q => ({
+        id: q.id,
+        question: q.question,
+        options: q.options,
+        difficulty: q.difficulty,
+        sortOrder: q.sortOrder,
+      }));
+      res.json(sanitized);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/quiz/submit", requireAuth, async (req, res) => {
+    try {
+      const { topicId, answers } = req.body;
+      if (!topicId || !answers || !Array.isArray(answers)) {
+        return res.status(400).json({ message: "topicId and answers array required" });
+      }
+      const questions = await storage.getQuizQuestions(topicId);
+      let correct = 0;
+      const results = questions.map((q, i) => {
+        const isCorrect = answers[i] === q.correctAnswer;
+        if (isCorrect) correct++;
+        return {
+          questionId: q.id,
+          correct: isCorrect,
+          correctAnswer: q.correctAnswer,
+          userAnswer: answers[i],
+          explanation: q.explanation,
+        };
+      });
+
+      const score = Math.round((correct / questions.length) * 100);
+      const userId = (req.user as any).id;
+
+      const attempt = await storage.createQuizAttempt({
+        userId,
+        topicId,
+        score,
+        totalQuestions: questions.length,
+      });
+
+      const newBadges: any[] = [];
+      const allBadges = await storage.getBadges();
+      const allAttempts = await storage.getQuizAttempts(userId);
+
+      for (const badge of allBadges) {
+        const alreadyHas = await storage.hasUserBadge(userId, badge.id);
+        if (alreadyHas) continue;
+
+        let earned = false;
+
+        if (badge.requirementType === "quizzes_completed") {
+          earned = allAttempts.length >= badge.requirementValue;
+        } else if (badge.requirementType === "quiz_score" && badge.topicId) {
+          if (topicId === badge.topicId && score >= badge.requirementValue) {
+            earned = true;
+          }
+        } else if (badge.requirementType === "all_topics_passed") {
+          const topics = await storage.getQuizTopics();
+          const passedTopics = new Set<string>();
+          for (const a of allAttempts) {
+            if (a.score >= 60) passedTopics.add(a.topicId);
+          }
+          earned = passedTopics.size >= topics.length;
+        } else if (badge.requirementType === "perfect_scores") {
+          const perfectTopics = new Set<string>();
+          for (const a of allAttempts) {
+            if (a.score === 100) perfectTopics.add(a.topicId);
+          }
+          earned = perfectTopics.size >= badge.requirementValue;
+        }
+
+        if (earned) {
+          await storage.awardBadge({ userId, badgeId: badge.id });
+          newBadges.push(badge);
+        }
+      }
+
+      res.json({ attempt, score, correct, total: questions.length, results, newBadges });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/quiz/attempts", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const attempts = await storage.getQuizAttempts(userId);
+      res.json(attempts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/badges", async (_req, res) => {
+    try {
+      const allBadges = await storage.getBadges();
+      res.json(allBadges);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/badges/mine", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const myBadges = await storage.getUserBadges(userId);
+      res.json(myBadges);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
   });
 
   return httpServer;

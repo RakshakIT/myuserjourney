@@ -699,3 +699,157 @@ export const insertInvoiceSchema = createInsertSchema(invoices).omit({
 
 export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 export type Invoice = typeof invoices.$inferSelect;
+
+export const quizTopics = pgTable("quiz_topics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  icon: text("icon").notNull().default("book"),
+  color: text("color").notNull().default("#3b82f6"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const insertQuizTopicSchema = createInsertSchema(quizTopics).omit({ id: true });
+export type InsertQuizTopic = z.infer<typeof insertQuizTopicSchema>;
+export type QuizTopic = typeof quizTopics.$inferSelect;
+
+export const quizQuestions = pgTable("quiz_questions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  topicId: varchar("topic_id").notNull(),
+  question: text("question").notNull(),
+  options: text("options").array().notNull(),
+  correctAnswer: integer("correct_answer").notNull(),
+  explanation: text("explanation"),
+  difficulty: text("difficulty").notNull().default("beginner"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const insertQuizQuestionSchema = createInsertSchema(quizQuestions).omit({ id: true });
+export type InsertQuizQuestion = z.infer<typeof insertQuizQuestionSchema>;
+export type QuizQuestion = typeof quizQuestions.$inferSelect;
+
+export const quizAttempts = pgTable("quiz_attempts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  topicId: varchar("topic_id").notNull(),
+  score: integer("score").notNull(),
+  totalQuestions: integer("total_questions").notNull(),
+  completedAt: timestamp("completed_at").defaultNow().notNull(),
+});
+
+export const insertQuizAttemptSchema = createInsertSchema(quizAttempts).omit({ id: true, completedAt: true });
+export type InsertQuizAttempt = z.infer<typeof insertQuizAttemptSchema>;
+export type QuizAttempt = typeof quizAttempts.$inferSelect;
+
+export const badges = pgTable("badges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  icon: text("icon").notNull().default("award"),
+  color: text("color").notNull().default("#f59e0b"),
+  requirement: text("requirement").notNull(),
+  requirementType: text("requirement_type").notNull().default("quiz_score"),
+  requirementValue: integer("requirement_value").notNull().default(1),
+  topicId: varchar("topic_id"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const insertBadgeSchema = createInsertSchema(badges).omit({ id: true });
+export type InsertBadge = z.infer<typeof insertBadgeSchema>;
+export type Badge = typeof badges.$inferSelect;
+
+export const userBadges = pgTable("user_badges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  badgeId: varchar("badge_id").notNull(),
+  earnedAt: timestamp("earned_at").defaultNow().notNull(),
+});
+
+export const insertUserBadgeSchema = createInsertSchema(userBadges).omit({ id: true, earnedAt: true });
+export type InsertUserBadge = z.infer<typeof insertUserBadgeSchema>;
+export type UserBadge = typeof userBadges.$inferSelect;
+
+export const blogPosts = pgTable("blog_posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  slug: text("slug").notNull().unique(),
+  excerpt: text("excerpt").notNull().default(""),
+  content: text("content").notNull().default(""),
+  category: text("category").notNull().default("General"),
+  author: text("author").notNull().default("My User Journey Team"),
+  featuredImage: text("featured_image"),
+  readTime: text("read_time").default("5 min read"),
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+  ogImage: text("og_image"),
+  status: text("status").notNull().default("draft"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertBlogPostSchema = createInsertSchema(blogPosts).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;
+export type BlogPost = typeof blogPosts.$inferSelect;
+
+export const guidesContent = pgTable("guides_content", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  slug: text("slug").notNull().unique(),
+  description: text("description").notNull().default(""),
+  content: text("content").notNull().default(""),
+  category: text("category").notNull().default("General"),
+  level: text("level").notNull().default("Beginner"),
+  readTime: text("read_time").default("10 min read"),
+  featuredImage: text("featured_image"),
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+  ogImage: text("og_image"),
+  status: text("status").notNull().default("draft"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertGuideSchema = createInsertSchema(guidesContent).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertGuide = z.infer<typeof insertGuideSchema>;
+export type Guide = typeof guidesContent.$inferSelect;
+
+export const caseStudiesContent = pgTable("case_studies_content", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  slug: text("slug").notNull().unique(),
+  company: text("company").notNull(),
+  industry: text("industry").notNull().default(""),
+  summary: text("summary").notNull().default(""),
+  content: text("content").notNull().default(""),
+  metrics: jsonb("metrics").default([]),
+  quote: text("quote"),
+  quoteAuthor: text("quote_author"),
+  featuredImage: text("featured_image"),
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+  ogImage: text("og_image"),
+  status: text("status").notNull().default("draft"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertCaseStudySchema = createInsertSchema(caseStudiesContent).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCaseStudy = z.infer<typeof insertCaseStudySchema>;
+export type CaseStudy = typeof caseStudiesContent.$inferSelect;
+
+export const helpArticles = pgTable("help_articles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  slug: text("slug").notNull().unique(),
+  content: text("content").notNull().default(""),
+  topic: text("topic").notNull().default("Getting Started"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  status: text("status").notNull().default("published"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertHelpArticleSchema = createInsertSchema(helpArticles).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertHelpArticle = z.infer<typeof insertHelpArticleSchema>;
+export type HelpArticle = typeof helpArticles.$inferSelect;

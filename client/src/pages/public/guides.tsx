@@ -2,9 +2,11 @@ import { PublicLayout } from "@/components/public-navbar";
 import { SEOHead, seoData } from "@/components/seo-head";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Clock, BookOpen } from "lucide-react";
+import { ArrowRight, Clock, BookOpen, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 
-const guides = [
+const fallbackGuides = [
   {
     title: "Complete GDPR Compliance Guide for Website Analytics",
     description: "A comprehensive walkthrough of setting up fully GDPR-compliant analytics, including consent management, IP anonymisation, and data subject rights.",
@@ -73,6 +75,13 @@ function levelColor(level: string) {
 }
 
 export default function GuidesPage() {
+  const { data: apiGuides, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/public/guides"],
+  });
+
+  const guides = apiGuides && apiGuides.length > 0 ? apiGuides : fallbackGuides;
+  const hasDbGuides = apiGuides && apiGuides.length > 0;
+
   return (
     <PublicLayout>
       <SEOHead title={seoData.guides.title} description={seoData.guides.description} keywords={seoData.guides.keywords} canonicalUrl="https://myuserjourney.co.uk/guides" />
@@ -92,29 +101,47 @@ export default function GuidesPage() {
       </section>
 
       <section className="max-w-4xl mx-auto px-6 pb-16">
-        <div className="space-y-4">
-          {guides.map((guide, i) => (
-            <Card key={i} className="hover-elevate cursor-pointer" data-testid={`card-guide-${i}`}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-2 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant="secondary" className="text-xs">{guide.category}</Badge>
-                      <Badge variant={levelColor(guide.level) as any} className="text-xs">{guide.level}</Badge>
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        {guide.readTime}
-                      </span>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16" data-testid="loading-spinner">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {guides.map((guide: any, i: number) => {
+              const card = (
+                <Card key={hasDbGuides ? guide.id : i} className="hover-elevate cursor-pointer" data-testid={`card-guide-${hasDbGuides ? guide.id : i}`}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-2 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="secondary" className="text-xs">{guide.category}</Badge>
+                          <Badge variant={levelColor(guide.level) as any} className="text-xs">{guide.level}</Badge>
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {guide.readTime}
+                          </span>
+                        </div>
+                        <h3 className="font-semibold">{guide.title}</h3>
+                        <p className="text-sm text-muted-foreground">{guide.description}</p>
+                      </div>
+                      <ArrowRight className="h-5 w-5 text-muted-foreground shrink-0 mt-2" />
                     </div>
-                    <h3 className="font-semibold">{guide.title}</h3>
-                    <p className="text-sm text-muted-foreground">{guide.description}</p>
-                  </div>
-                  <ArrowRight className="h-5 w-5 text-muted-foreground shrink-0 mt-2" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  </CardContent>
+                </Card>
+              );
+
+              if (hasDbGuides && guide.slug) {
+                return (
+                  <Link key={guide.id} href={"/guides/" + guide.slug} data-testid={`link-guide-${guide.id}`}>
+                    {card}
+                  </Link>
+                );
+              }
+
+              return card;
+            })}
+          </div>
+        )}
       </section>
     </PublicLayout>
   );

@@ -88,8 +88,8 @@ export default function PricingPage() {
               </div>
               <p className="text-sm text-muted-foreground mt-2">Always free, no limits</p>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <ul className="space-y-2">
+            <CardContent className="flex flex-col gap-6 pt-4">
+              <ul className="space-y-3">
                 {["Unlimited projects", "Real-time analytics", "Custom reports & funnels", "Traffic & page analysis", "Geography & device stats", "Full GDPR/PECR compliance", "Consent management", "CSV/JSON export", "User journey replay"].map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm">
                     <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
@@ -98,7 +98,7 @@ export default function PricingPage() {
                 ))}
               </ul>
               <a href="/login">
-                <Button className="w-full" variant="outline" data-testid="button-get-started-free">
+                <Button className="w-full" size="lg" variant="outline" data-testid="button-get-started-free">
                   Get Started Free
                 </Button>
               </a>
@@ -118,8 +118,8 @@ export default function PricingPage() {
                 Invoiced via Stripe when exceeding {"\u00a3"}10/month
               </p>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <ul className="space-y-2">
+            <CardContent className="flex flex-col gap-6 pt-4">
+              <ul className="space-y-3">
                 {["Everything in Core Analytics", "AI Insights & chat assistant", "Predictive analytics", "AI UX Auditor", "AI Marketing Copilot", "Content gap analysis", "AI Site Research", "AI funnel generation", "AI report generation"].map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm">
                     <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
@@ -128,7 +128,7 @@ export default function PricingPage() {
                 ))}
               </ul>
               <a href="/login">
-                <Button className="w-full" data-testid="button-get-started-payg">
+                <Button className="w-full" size="lg" data-testid="button-get-started-payg">
                   Start Using AI Features
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>

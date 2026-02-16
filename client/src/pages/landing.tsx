@@ -154,8 +154,8 @@ export default function LandingPage() {
                   Unlimited projects
                 </p>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <ul className="space-y-2">
+              <CardContent className="flex flex-col gap-6 pt-4">
+                <ul className="space-y-3">
                   {[
                     "Unlimited Projects",
                     "Real-time Dashboard",
@@ -174,7 +174,7 @@ export default function LandingPage() {
                   ))}
                 </ul>
                 <Link href="/login">
-                  <Button className="w-full" data-testid="button-get-started-free">
+                  <Button className="w-full" size="lg" data-testid="button-get-started-free">
                     Get Started Free
                   </Button>
                 </Link>
@@ -194,8 +194,8 @@ export default function LandingPage() {
                   Only pay for what you use
                 </p>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <ul className="space-y-2">
+              <CardContent className="flex flex-col gap-6 pt-4">
+                <ul className="space-y-3">
                   {[
                     "AI Copilot Chat",
                     "Predictive Analytics",
@@ -214,7 +214,7 @@ export default function LandingPage() {
                   ))}
                 </ul>
                 <Link href="/pricing">
-                  <Button variant="outline" className="w-full" data-testid="button-view-pricing">
+                  <Button variant="outline" className="w-full" size="lg" data-testid="button-view-pricing">
                     View Pricing Details
                   </Button>
                 </Link>
@@ -224,13 +224,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-20">
-        <div className="max-w-3xl mx-auto px-6 text-center space-y-6">
+      <section className="py-24">
+        <div className="max-w-3xl mx-auto px-6 text-center flex flex-col items-center gap-6">
           <h2 className="text-3xl font-bold">Ready to take control of your analytics?</h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground max-w-lg">
             Join businesses that trust My User Journey for privacy-first, AI-powered analytics.
           </p>
-          <Link href="/login">
+          <Link href="/login" className="mt-2">
             <Button size="lg" data-testid="button-cta-signup">
               Create Your Account
               <ArrowRight className="ml-2 h-4 w-4" />

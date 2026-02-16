@@ -39,28 +39,27 @@ const ListItem = forwardRef<
   return (
     <li>
       <NavigationMenuLink asChild>
-        <Link href={href}>
-          <a
-            ref={ref}
-            className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover-elevate"
-            {...props}
-          >
-            <div className="flex items-center gap-3">
-              {Icon && (
-                <div className="p-1.5 rounded-md bg-muted shrink-0">
-                  <Icon className="h-4 w-4 text-muted-foreground" />
-                </div>
-              )}
-              <div>
-                <div className="text-sm font-medium leading-none">{title}</div>
-                {description && (
-                  <p className="line-clamp-2 text-xs leading-snug text-muted-foreground mt-1">
-                    {description}
-                  </p>
-                )}
+        <Link
+          href={href}
+          ref={ref}
+          className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover-elevate"
+          {...props}
+        >
+          <div className="flex items-center gap-3">
+            {Icon && (
+              <div className="p-1.5 rounded-md bg-muted shrink-0">
+                <Icon className="h-4 w-4 text-muted-foreground" />
               </div>
+            )}
+            <div>
+              <div className="text-sm font-medium leading-none">{title}</div>
+              {description && (
+                <p className="line-clamp-2 text-xs leading-snug text-muted-foreground mt-1">
+                  {description}
+                </p>
+              )}
             </div>
-          </a>
+          </div>
         </Link>
       </NavigationMenuLink>
     </li>
@@ -74,10 +73,8 @@ function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 bg-background md:hidden">
       <div className="flex items-center justify-between px-6 py-3 border-b">
-        <Link href="/landing">
-          <a className="flex items-center gap-2" onClick={onClose}>
-            <AnimatedLogo size="sm" showText={true} />
-          </a>
+        <Link href="/landing" className="flex items-center gap-2" onClick={onClose}>
+          <AnimatedLogo size="sm" showText={true} />
         </Link>
         <Button variant="ghost" size="icon" onClick={onClose} data-testid="button-mobile-nav-close">
           <X className="h-5 w-5" />
@@ -86,28 +83,28 @@ function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
       <nav className="overflow-auto h-[calc(100vh-56px)] p-6 space-y-6">
         <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Use Cases</p>
-          <Link href="/use-cases"><a className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-use-cases">Use Cases</a></Link>
+          <Link href="/use-cases" className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-use-cases">Use Cases</Link>
         </div>
         <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Resources</p>
-          <Link href="/start-guide"><a className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-start-guide">Start Guide</a></Link>
-          <Link href="/docs"><a className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-docs">Docs</a></Link>
-          <Link href="/blog"><a className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-blog">Blog</a></Link>
-          <Link href="/help-center"><a className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-help-center">Help Center</a></Link>
-          <Link href="/capabilities"><a className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-capabilities">Capabilities</a></Link>
-          <Link href="/guides"><a className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-guides">Guides</a></Link>
+          <Link href="/start-guide" className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-start-guide">Start Guide</Link>
+          <Link href="/docs" className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-docs">Docs</Link>
+          <Link href="/blog" className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-blog">Blog</Link>
+          <Link href="/help-center" className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-help-center">Help Center</Link>
+          <Link href="/capabilities" className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-capabilities">Capabilities</Link>
+          <Link href="/guides" className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-guides">Guides</Link>
         </div>
         <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Security</p>
-          <Link href="/security"><a className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-security">Security</a></Link>
-          <Link href="/trust-center"><a className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-trust-center">Trust Center</a></Link>
-          <Link href="/terms"><a className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-terms">Terms & Conditions</a></Link>
-          <Link href="/privacy-policy"><a className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-privacy-policy">Privacy Policy</a></Link>
+          <Link href="/security" className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-security">Security</Link>
+          <Link href="/trust-center" className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-trust-center">Trust Center</Link>
+          <Link href="/terms" className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-terms">Terms & Conditions</Link>
+          <Link href="/privacy-policy" className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-privacy-policy">Privacy Policy</Link>
         </div>
         <div>
-          <Link href="/connectors"><a className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-connectors">Connectors</a></Link>
-          <Link href="/community"><a className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-community">Community</a></Link>
-          <Link href="/pricing"><a className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-pricing">Pricing</a></Link>
+          <Link href="/connectors" className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-connectors">Connectors</Link>
+          <Link href="/community" className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-community">Community</Link>
+          <Link href="/pricing" className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-pricing">Pricing</Link>
         </div>
         <div className="pt-4 space-y-3 border-t">
           <Link href="/login"><Button variant="ghost" className="w-full" data-testid="mobile-button-login" onClick={onClose}>Log In</Button></Link>
@@ -126,10 +123,8 @@ export function PublicNavbar() {
     <>
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 px-6 py-2">
-          <Link href="/landing">
-            <a className="flex items-center shrink-0" data-testid="link-logo">
-              <AnimatedLogo size="md" showText={true} />
-            </a>
+          <Link href="/landing" className="flex items-center shrink-0" data-testid="link-logo">
+            <AnimatedLogo size="md" showText={true} />
           </Link>
 
           <div className="hidden md:flex items-center">
@@ -164,8 +159,8 @@ export function PublicNavbar() {
                         <p className="text-xs font-semibold text-muted-foreground px-3 py-2">Success Stories</p>
                         <ul className="space-y-0">
                           <li className="p-3 rounded-md hover-elevate">
-                            <Link href="/case-studies">
-                              <a className="block text-sm font-medium" data-testid="link-case-studies">View All Case Studies</a>
+                            <Link href="/case-studies" className="block" data-testid="link-case-studies">
+                              <span className="block text-sm font-medium">View All Case Studies</span>
                               <p className="text-xs text-muted-foreground mt-1">See how teams use My User Journey</p>
                             </Link>
                           </li>
@@ -268,36 +263,36 @@ export function PublicFooter() {
           <div>
             <p className="text-sm font-semibold mb-4">Product</p>
             <ul className="space-y-2">
-              <li><Link href="/use-cases"><a className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-use-cases">Use Cases</a></Link></li>
-              <li><Link href="/pricing"><a className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-pricing">Pricing</a></Link></li>
-              <li><Link href="/connectors"><a className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-connectors">Connectors</a></Link></li>
-              <li><Link href="/capabilities"><a className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-capabilities">Capabilities</a></Link></li>
+              <li><Link href="/use-cases" className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-use-cases">Use Cases</Link></li>
+              <li><Link href="/pricing" className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-pricing">Pricing</Link></li>
+              <li><Link href="/connectors" className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-connectors">Connectors</Link></li>
+              <li><Link href="/capabilities" className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-capabilities">Capabilities</Link></li>
             </ul>
           </div>
           <div>
             <p className="text-sm font-semibold mb-4">Resources</p>
             <ul className="space-y-2">
-              <li><Link href="/start-guide"><a className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-start-guide">Start Guide</a></Link></li>
-              <li><Link href="/docs"><a className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-docs">Docs</a></Link></li>
-              <li><Link href="/blog"><a className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-blog">Blog</a></Link></li>
-              <li><Link href="/guides"><a className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-guides">Guides</a></Link></li>
+              <li><Link href="/start-guide" className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-start-guide">Start Guide</Link></li>
+              <li><Link href="/docs" className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-docs">Docs</Link></li>
+              <li><Link href="/blog" className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-blog">Blog</Link></li>
+              <li><Link href="/guides" className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-guides">Guides</Link></li>
             </ul>
           </div>
           <div>
             <p className="text-sm font-semibold mb-4">Community</p>
             <ul className="space-y-2">
-              <li><Link href="/community"><a className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-community">Community</a></Link></li>
-              <li><Link href="/help-center"><a className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-help">Help Center</a></Link></li>
-              <li><Link href="/case-studies"><a className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-case-studies">Case Studies</a></Link></li>
+              <li><Link href="/community" className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-community">Community</Link></li>
+              <li><Link href="/help-center" className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-help">Help Center</Link></li>
+              <li><Link href="/case-studies" className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-case-studies">Case Studies</Link></li>
             </ul>
           </div>
           <div>
             <p className="text-sm font-semibold mb-4">Legal</p>
             <ul className="space-y-2">
-              <li><Link href="/security"><a className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-security">Security</a></Link></li>
-              <li><Link href="/trust-center"><a className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-trust">Trust Center</a></Link></li>
-              <li><Link href="/terms"><a className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-terms">Terms & Conditions</a></Link></li>
-              <li><Link href="/privacy-policy"><a className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-privacy">Privacy Policy</a></Link></li>
+              <li><Link href="/security" className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-security">Security</Link></li>
+              <li><Link href="/trust-center" className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-trust">Trust Center</Link></li>
+              <li><Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-terms">Terms & Conditions</Link></li>
+              <li><Link href="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-privacy">Privacy Policy</Link></li>
             </ul>
           </div>
         </div>
@@ -325,23 +320,21 @@ function TrackingScripts() {
     staleTime: 5 * 60 * 1000,
   });
 
-  if (!settings) return null;
-
   const headScripts: string[] = [];
 
-  if (settings.googleTagManagerId) {
+  if (settings?.googleTagManagerId) {
     headScripts.push(`<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${settings.googleTagManagerId}');</script>`);
   }
 
-  if (settings.googleAnalyticsId) {
+  if (settings?.googleAnalyticsId) {
     headScripts.push(`<script async src="https://www.googletagmanager.com/gtag/js?id=${settings.googleAnalyticsId}"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${settings.googleAnalyticsId}');</script>`);
   }
 
-  if (settings.googleAdsId) {
+  if (settings?.googleAdsId) {
     headScripts.push(`<script async src="https://www.googletagmanager.com/gtag/js?id=${settings.googleAdsId}"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('config','${settings.googleAdsId}');</script>`);
   }
 
-  if (settings.googleSearchConsoleCode) {
+  if (settings?.googleSearchConsoleCode) {
     const code = settings.googleSearchConsoleCode;
     if (code.startsWith("<meta")) {
       headScripts.push(code);
@@ -350,43 +343,43 @@ function TrackingScripts() {
     }
   }
 
-  if (settings.facebookPixelId) {
+  if (settings?.facebookPixelId) {
     headScripts.push(`<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${settings.facebookPixelId}');fbq('track','PageView');</script>`);
   }
 
-  if (settings.microsoftAdsId) {
+  if (settings?.microsoftAdsId) {
     headScripts.push(`<script>(function(w,d,t,r,u){var f,n,i;w[u]=w[u]||[],f=function(){var o={ti:"${settings.microsoftAdsId}",enableAutoSpaTracking:true};o.q=w[u],w[u]=new UET(o),w[u].push("pageLoad")},n=d.createElement(t),n.src=r,n.async=1,n.onload=n.onreadystatechange=function(){var s=this.readyState;s&&s!=="loaded"&&s!=="complete"||(f(),n.onload=n.onreadystatechange=null)},i=d.getElementsByTagName(t)[0],i.parentNode.insertBefore(n,i)})(window,document,"script","//bat.bing.com/bat.js","uetq");</script>`);
   }
 
-  if (settings.tiktokPixelId) {
+  if (settings?.tiktokPixelId) {
     headScripts.push(`<script>!function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var i=document.createElement("script");i.type="text/javascript",i.async=!0,i.src=r+"?sdkid="+e+"&lib="+t;var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(i,a)};ttq.load('${settings.tiktokPixelId}');ttq.page();}(window,document,'ttq');</script>`);
   }
 
-  if (settings.linkedinInsightTagId) {
+  if (settings?.linkedinInsightTagId) {
     headScripts.push(`<script type="text/javascript">_linkedin_partner_id="${settings.linkedinInsightTagId}";window._linkedin_data_partner_ids=window._linkedin_data_partner_ids||[];window._linkedin_data_partner_ids.push(_linkedin_partner_id);</script><script type="text/javascript">(function(l){if(!l){window.lintrk=function(a,b){window.lintrk.q.push([a,b])};window.lintrk.q=[]}var s=document.getElementsByTagName("script")[0];var b=document.createElement("script");b.type="text/javascript";b.async=true;b.src="https://snap.licdn.com/li.lms-analytics/insight.min.js";s.parentNode.insertBefore(b,s);})(window.lintrk);</script>`);
   }
 
-  if (settings.pinterestTagId) {
+  if (settings?.pinterestTagId) {
     headScripts.push(`<script>!function(e){if(!window.pintrk){window.pintrk=function(){window.pintrk.queue.push(Array.prototype.slice.call(arguments))};var n=window.pintrk;n.queue=[],n.version="3.0";var t=document.createElement("script");t.async=!0,t.src=e;var r=document.getElementsByTagName("script")[0];r.parentNode.insertBefore(t,r)}}("https://s.pinimg.com/ct/core.js");pintrk('load','${settings.pinterestTagId}');pintrk('page');</script>`);
   }
 
-  if (settings.snapchatPixelId) {
+  if (settings?.snapchatPixelId) {
     headScripts.push(`<script type="text/javascript">(function(e,t,n){if(e.snaptr)return;var a=e.snaptr=function(){a.handleRequest?a.handleRequest.apply(a,arguments):a.queue.push(arguments)};a.queue=[];var s='script';var r=t.createElement(s);r.async=!0;r.src=n;var u=t.getElementsByTagName(s)[0];u.parentNode.insertBefore(r,u);})(window,document,'https://sc-static.net/scevent.min.js');snaptr('init','${settings.snapchatPixelId}',{});snaptr('track','PAGE_VIEW');</script>`);
   }
 
-  if (settings.twitterPixelId) {
+  if (settings?.twitterPixelId) {
     headScripts.push(`<script>!function(e,t,n,s,u,a){e.twq||(s=e.twq=function(){s.exe?s.exe.apply(s,arguments):s.queue.push(arguments);},s.version='1.1',s.queue=[],u=t.createElement(n),u.async=!0,u.src='https://static.ads-twitter.com/uwt.js',a=t.getElementsByTagName(n)[0],a.parentNode.insertBefore(u,a))}(window,document,'script');twq('config','${settings.twitterPixelId}');</script>`);
   }
 
-  if (settings.hotjarSiteId) {
+  if (settings?.hotjarSiteId) {
     headScripts.push(`<script>(function(h,o,t,j,a,r){h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};h._hjSettings={hjid:${settings.hotjarSiteId},hjsv:6};a=o.getElementsByTagName('head')[0];r=o.createElement('script');r.async=1;r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;a.appendChild(r);})(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');</script>`);
   }
 
-  if (settings.clarityProjectId) {
+  if (settings?.clarityProjectId) {
     headScripts.push(`<script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","${settings.clarityProjectId}");</script>`);
   }
 
-  if (settings.bingVerificationCode) {
+  if (settings?.bingVerificationCode) {
     const code = settings.bingVerificationCode;
     if (code.startsWith("<meta")) {
       headScripts.push(code);
@@ -395,7 +388,7 @@ function TrackingScripts() {
     }
   }
 
-  if (settings.yandexVerificationCode) {
+  if (settings?.yandexVerificationCode) {
     const code = settings.yandexVerificationCode;
     if (code.startsWith("<meta")) {
       headScripts.push(code);
@@ -404,29 +397,29 @@ function TrackingScripts() {
     }
   }
 
-  if (settings.customTrackingHead) {
+  if (settings?.customTrackingHead) {
     headScripts.push(settings.customTrackingHead);
   }
 
   const bodyScripts: string[] = [];
 
-  if (settings.googleTagManagerId) {
+  if (settings?.googleTagManagerId) {
     bodyScripts.push(`<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=${settings.googleTagManagerId}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>`);
   }
 
-  if (settings.facebookPixelId) {
+  if (settings?.facebookPixelId) {
     bodyScripts.push(`<noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=${settings.facebookPixelId}&ev=PageView&noscript=1"/></noscript>`);
   }
 
-  if (settings.linkedinInsightTagId) {
+  if (settings?.linkedinInsightTagId) {
     bodyScripts.push(`<noscript><img height="1" width="1" style="display:none;" alt="" src="https://px.ads.linkedin.com/collect/?pid=${settings.linkedinInsightTagId}&fmt=gif"/></noscript>`);
   }
 
-  if (settings.pinterestTagId) {
+  if (settings?.pinterestTagId) {
     bodyScripts.push(`<noscript><img height="1" width="1" style="display:none;" alt="" src="https://ct.pinterest.com/v3/?event=init&tid=${settings.pinterestTagId}&noscript=1"/></noscript>`);
   }
 
-  if (settings.customTrackingBody) {
+  if (settings?.customTrackingBody) {
     bodyScripts.push(settings.customTrackingBody);
   }
 

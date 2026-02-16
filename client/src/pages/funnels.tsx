@@ -17,6 +17,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useDateRange } from "@/hooks/use-date-range";
 import { DateRangePicker } from "@/components/date-range-picker";
 import type { Funnel } from "@shared/schema";
+import { FeatureGuide, GUIDE_CONFIGS } from "@/components/feature-guide";
 
 interface FunnelStep {
   name: string;
@@ -313,6 +314,7 @@ export default function FunnelsPage() {
 
   return (
     <div className="p-6 space-y-6">
+      <FeatureGuide {...GUIDE_CONFIGS.funnels} />
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <GitFork className="h-5 w-5 text-primary" />

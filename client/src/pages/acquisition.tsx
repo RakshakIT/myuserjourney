@@ -6,6 +6,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis
 import { Globe, Users, Layers } from "lucide-react";
 import { AnalyticsHeader } from "@/components/analytics-header";
 import { useDateRange } from "@/hooks/use-date-range";
+import { FeatureGuide, GUIDE_CONFIGS } from "@/components/feature-guide";
 
 interface AcquisitionData {
   period: string;
@@ -80,6 +81,7 @@ export default function AcquisitionPage() {
 
   return (
     <div className="p-6 space-y-6">
+      <FeatureGuide {...GUIDE_CONFIGS.acquisition} />
       <AnalyticsHeader title="Acquisition Overview" icon={Globe} {...headerProps} exportData={data} exportFilename="acquisition" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

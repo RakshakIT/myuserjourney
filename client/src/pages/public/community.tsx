@@ -3,6 +3,7 @@ import { SEOHead, seoData } from "@/components/seo-head";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "wouter";
 import {
   Users,
   MessageSquare,
@@ -20,24 +21,28 @@ const channels = [
     description: "Ask questions, share insights, and connect with other My User Journey users.",
     icon: MessageSquare,
     action: "Join the Forum",
+    link: "/community/forum",
   },
   {
     title: "Knowledge Base",
     description: "Browse community-contributed guides, tutorials, and best practices.",
     icon: BookOpen,
     action: "Browse Articles",
+    link: "/guides",
   },
   {
     title: "Feature Requests",
     description: "Vote on upcoming features and suggest improvements to the platform.",
     icon: Star,
     action: "Submit Ideas",
+    link: "/community/ideas",
   },
   {
     title: "Help & Support",
     description: "Get help from the community and our support team for technical questions.",
     icon: HelpCircle,
     action: "Get Help",
+    link: "/help-center",
   },
 ];
 
@@ -63,12 +68,12 @@ export default function CommunityPage() {
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Connect with analytics professionals, share knowledge, and help shape the future of privacy-first analytics.
             </p>
-            <a href="/login">
+            <Link href="/login">
               <Button size="lg" data-testid="button-join-community">
                 Join the Community
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-            </a>
+            </Link>
           </div>
         </div>
       </section>
@@ -98,10 +103,12 @@ export default function CommunityPage() {
                   <div className="space-y-2">
                     <h3 className="font-semibold">{ch.title}</h3>
                     <p className="text-sm text-muted-foreground">{ch.description}</p>
-                    <Button variant="outline" size="sm" data-testid={`button-${ch.title.toLowerCase().replace(/\s/g, "-")}`}>
-                      {ch.action}
-                      <ArrowRight className="ml-2 h-3 w-3" />
-                    </Button>
+                    <Link href={ch.link}>
+                      <Button variant="outline" size="sm" data-testid={`button-${ch.title.toLowerCase().replace(/\s/g, "-")}`}>
+                        {ch.action}
+                        <ArrowRight className="ml-2 h-3 w-3" />
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </CardContent>
@@ -117,14 +124,18 @@ export default function CommunityPage() {
             My User Journey is built for the community. Share your expertise, write guides, and help others succeed with analytics.
           </p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
-            <Button variant="outline" data-testid="button-write-guide">
-              <BookOpen className="mr-2 h-4 w-4" />
-              Write a Guide
-            </Button>
-            <Button variant="outline" data-testid="button-share">
-              <Share2 className="mr-2 h-4 w-4" />
-              Share Your Story
-            </Button>
+            <Link href="/contact">
+              <Button variant="outline" data-testid="button-write-guide">
+                <BookOpen className="mr-2 h-4 w-4" />
+                Write a Guide
+              </Button>
+            </Link>
+            <Link href="/contact">
+              <Button variant="outline" data-testid="button-share">
+                <Share2 className="mr-2 h-4 w-4" />
+                Share Your Story
+              </Button>
+            </Link>
           </div>
         </div>
       </section>

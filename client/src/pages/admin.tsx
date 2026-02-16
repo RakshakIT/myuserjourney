@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,9 +13,11 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
   Shield, Users, Settings, Save, Trash2, Plus, Mail, FileText,
-  Upload, Copy, Globe, MessageSquare, Image, File, Loader2, Send, Eye, Code, CreditCard
+  Upload, Copy, Globe, MessageSquare, Image, File, Loader2, Send, Eye, Code, CreditCard, BookOpen
 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { FeatureGuide, GUIDE_CONFIGS } from "@/components/feature-guide";
+import { HtmlEditor } from "@/components/html-editor";
 
 interface SiteSettingsData {
   id?: string;
@@ -954,12 +955,36 @@ function FilesTab() {
 
 function UsersTab() {
   const { toast } = useToast();
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [newUsername, setNewUsername] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newRole, setNewRole] = useState("user");
 
   const { data: users, isLoading } = useQuery<AdminUser[]>({
     queryKey: ["/api/admin/users"],
     queryFn: async () => {
       const res = await fetch("/api/admin/users", { credentials: "include" });
       return res.json();
+    },
+  });
+
+  const createUser = useMutation({
+    mutationFn: async (data: { email: string; password: string; username?: string; role: string }) => {
+      const res = await apiRequest("POST", "/api/admin/users", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({ title: "User created successfully" });
+      setShowAddUser(false);
+      setNewEmail("");
+      setNewUsername("");
+      setNewPassword("");
+      setNewRole("user");
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
 
@@ -995,6 +1020,14 @@ function UsersTab() {
     }
   };
 
+  const handleAddUser = () => {
+    if (!newEmail || !newPassword) {
+      toast({ title: "Error", description: "Email and password are required", variant: "destructive" });
+      return;
+    }
+    createUser.mutate({ email: newEmail, password: newPassword, username: newUsername || undefined, role: newRole });
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -1007,10 +1040,76 @@ function UsersTab() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
         <CardTitle className="text-base flex items-center gap-2">
           <Users className="h-4 w-4" /> User Management
         </CardTitle>
+        <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
+          <DialogTrigger asChild>
+            <Button size="sm" data-testid="button-add-user">
+              <Plus className="h-4 w-4 mr-1" /> Add User
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New User</DialogTitle>
+              <DialogDescription>Create a new user account with email and password.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="new-user-email">Email *</Label>
+                <Input
+                  id="new-user-email"
+                  type="email"
+                  placeholder="user@example.com"
+                  value={newEmail}
+                  onChange={e => setNewEmail(e.target.value)}
+                  data-testid="input-new-user-email"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-user-username">Username (optional)</Label>
+                <Input
+                  id="new-user-username"
+                  placeholder="Leave blank to auto-generate from email"
+                  value={newUsername}
+                  onChange={e => setNewUsername(e.target.value)}
+                  data-testid="input-new-user-username"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-user-password">Password *</Label>
+                <Input
+                  id="new-user-password"
+                  type="password"
+                  placeholder="Minimum 6 characters"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  data-testid="input-new-user-password"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-user-role">Role</Label>
+                <Select value={newRole} onValueChange={setNewRole}>
+                  <SelectTrigger data-testid="select-new-user-role">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowAddUser(false)} data-testid="button-cancel-add-user">Cancel</Button>
+              <Button onClick={handleAddUser} disabled={createUser.isPending} data-testid="button-save-new-user">
+                {createUser.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                Create User
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
@@ -1647,6 +1746,1026 @@ function PaymentGatewaysTab() {
   );
 }
 
+interface BlogPostData {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  category: string;
+  author: string;
+  readTime: string;
+  status: string;
+  metaTitle: string | null;
+  metaDescription: string | null;
+}
+
+function BlogPostsTab() {
+  const { toast } = useToast();
+  const [showDialog, setShowDialog] = useState(false);
+  const [editingPost, setEditingPost] = useState<BlogPostData | null>(null);
+  const [postForm, setPostForm] = useState({
+    title: "",
+    slug: "",
+    excerpt: "",
+    content: "",
+    category: "General",
+    author: "",
+    readTime: "",
+    status: "draft",
+    metaTitle: "",
+    metaDescription: "",
+  });
+
+  const { data: posts, isLoading } = useQuery<BlogPostData[]>({
+    queryKey: ["/api/admin/blog-posts"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/blog-posts", { credentials: "include" });
+      return res.json();
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: typeof postForm) => {
+      await apiRequest("POST", "/api/admin/blog-posts", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/blog-posts"] });
+      toast({ title: "Blog post created" });
+      resetForm();
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: typeof postForm }) => {
+      await apiRequest("PATCH", `/api/admin/blog-posts/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/blog-posts"] });
+      toast({ title: "Blog post updated" });
+      resetForm();
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/admin/blog-posts/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/blog-posts"] });
+      toast({ title: "Blog post deleted" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const resetForm = () => {
+    setShowDialog(false);
+    setEditingPost(null);
+    setPostForm({ title: "", slug: "", excerpt: "", content: "", category: "General", author: "", readTime: "", status: "draft", metaTitle: "", metaDescription: "" });
+  };
+
+  const openEdit = (post: BlogPostData) => {
+    setEditingPost(post);
+    setPostForm({
+      title: post.title,
+      slug: post.slug,
+      excerpt: post.excerpt || "",
+      content: post.content || "",
+      category: post.category || "General",
+      author: post.author || "",
+      readTime: post.readTime || "",
+      status: post.status,
+      metaTitle: post.metaTitle || "",
+      metaDescription: post.metaDescription || "",
+    });
+    setShowDialog(true);
+  };
+
+  const openCreate = () => {
+    resetForm();
+    setShowDialog(true);
+  };
+
+  const handleTitleChange = (title: string) => {
+    setPostForm(prev => ({
+      ...prev,
+      title,
+      slug: editingPost ? prev.slug : generateSlug(title),
+    }));
+  };
+
+  const handleSave = () => {
+    if (editingPost) {
+      updateMutation.mutate({ id: editingPost.id, data: postForm });
+    } else {
+      createMutation.mutate(postForm);
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    if (window.confirm("Are you sure you want to delete this blog post?")) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <BookOpen className="h-4 w-4" /> Blog Posts
+        </CardTitle>
+        <Dialog open={showDialog} onOpenChange={v => { if (!v) resetForm(); else openCreate(); }}>
+          <DialogTrigger asChild>
+            <Button size="sm" data-testid="button-add-blog-post">
+              <Plus className="h-4 w-4 mr-1" /> Add Post
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingPost ? "Edit Blog Post" : "Create New Blog Post"}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Input
+                    value={postForm.title}
+                    onChange={e => handleTitleChange(e.target.value)}
+                    data-testid="input-blog-title"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Slug</Label>
+                  <Input
+                    value={postForm.slug}
+                    onChange={e => setPostForm(p => ({ ...p, slug: e.target.value }))}
+                    data-testid="input-blog-slug"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Excerpt</Label>
+                <Textarea
+                  value={postForm.excerpt}
+                  onChange={e => setPostForm(p => ({ ...p, excerpt: e.target.value }))}
+                  rows={3}
+                  data-testid="input-blog-excerpt"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Content</Label>
+                <HtmlEditor
+                  value={postForm.content}
+                  onChange={v => setPostForm(p => ({ ...p, content: v }))}
+                  data-testid="input-blog-content"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select value={postForm.category} onValueChange={v => setPostForm(p => ({ ...p, category: v }))}>
+                    <SelectTrigger data-testid="select-blog-category">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="General">General</SelectItem>
+                      <SelectItem value="Product">Product</SelectItem>
+                      <SelectItem value="Privacy">Privacy</SelectItem>
+                      <SelectItem value="Tutorial">Tutorial</SelectItem>
+                      <SelectItem value="Insights">Insights</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Author</Label>
+                  <Input
+                    value={postForm.author}
+                    onChange={e => setPostForm(p => ({ ...p, author: e.target.value }))}
+                    data-testid="input-blog-author"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Read Time</Label>
+                  <Input
+                    value={postForm.readTime}
+                    onChange={e => setPostForm(p => ({ ...p, readTime: e.target.value }))}
+                    placeholder="5 min read"
+                    data-testid="input-blog-read-time"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select value={postForm.status} onValueChange={v => setPostForm(p => ({ ...p, status: v }))}>
+                    <SelectTrigger data-testid="select-blog-status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="published">Published</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Meta Title</Label>
+                  <Input
+                    value={postForm.metaTitle}
+                    onChange={e => setPostForm(p => ({ ...p, metaTitle: e.target.value }))}
+                    data-testid="input-blog-meta-title"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Meta Description</Label>
+                  <Input
+                    value={postForm.metaDescription}
+                    onChange={e => setPostForm(p => ({ ...p, metaDescription: e.target.value }))}
+                    data-testid="input-blog-meta-description"
+                  />
+                </div>
+              </div>
+              <Button
+                className="w-full"
+                onClick={handleSave}
+                disabled={!postForm.title || !postForm.slug || createMutation.isPending || updateMutation.isPending}
+                data-testid="button-save-blog-post"
+              >
+                {(createMutation.isPending || updateMutation.isPending) ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                {editingPost ? "Update Post" : "Create Post"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent>
+        {(!posts || posts.length === 0) ? (
+          <p className="text-sm text-muted-foreground text-center py-8" data-testid="text-no-blog-posts">No blog posts yet</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 pr-4 font-medium text-muted-foreground">Title</th>
+                  <th className="text-left py-2 px-4 font-medium text-muted-foreground">Slug</th>
+                  <th className="text-left py-2 px-4 font-medium text-muted-foreground">Category</th>
+                  <th className="text-left py-2 px-4 font-medium text-muted-foreground">Status</th>
+                  <th className="text-right py-2 pl-4 font-medium text-muted-foreground">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {posts.map(post => (
+                  <tr key={post.id} className="border-b last:border-0" data-testid={`row-blog-post-${post.id}`}>
+                    <td className="py-3 pr-4 font-medium">{post.title}</td>
+                    <td className="py-3 px-4 text-muted-foreground">/{post.slug}</td>
+                    <td className="py-3 px-4">
+                      <Badge variant="secondary" data-testid={`badge-blog-category-${post.id}`}>
+                        {post.category}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-4">
+                      <Badge variant={post.status === "published" ? "default" : "secondary"} data-testid={`badge-blog-status-${post.id}`}>
+                        {post.status}
+                      </Badge>
+                    </td>
+                    <td className="py-3 pl-4 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(post)} data-testid={`button-edit-blog-post-${post.id}`}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(post.id)} data-testid={`button-delete-blog-post-${post.id}`}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+interface GuideData {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  content: string;
+  category: string;
+  level: string;
+  readTime: string;
+  sortOrder: number;
+  status: string;
+  metaTitle: string | null;
+  metaDescription: string | null;
+}
+
+function GuidesTab() {
+  const { toast } = useToast();
+  const [showDialog, setShowDialog] = useState(false);
+  const [editingGuide, setEditingGuide] = useState<GuideData | null>(null);
+  const [guideForm, setGuideForm] = useState({
+    title: "",
+    slug: "",
+    description: "",
+    content: "",
+    category: "General",
+    level: "Beginner",
+    readTime: "",
+    sortOrder: 0,
+    status: "draft",
+    metaTitle: "",
+    metaDescription: "",
+  });
+
+  const { data: guides, isLoading } = useQuery<GuideData[]>({
+    queryKey: ["/api/admin/guides"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/guides", { credentials: "include" });
+      return res.json();
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: typeof guideForm) => {
+      await apiRequest("POST", "/api/admin/guides", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/guides"] });
+      toast({ title: "Guide created" });
+      resetForm();
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: typeof guideForm }) => {
+      await apiRequest("PATCH", `/api/admin/guides/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/guides"] });
+      toast({ title: "Guide updated" });
+      resetForm();
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/admin/guides/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/guides"] });
+      toast({ title: "Guide deleted" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const resetForm = () => {
+    setShowDialog(false);
+    setEditingGuide(null);
+    setGuideForm({ title: "", slug: "", description: "", content: "", category: "General", level: "Beginner", readTime: "", sortOrder: 0, status: "draft", metaTitle: "", metaDescription: "" });
+  };
+
+  const openEdit = (guide: GuideData) => {
+    setEditingGuide(guide);
+    setGuideForm({
+      title: guide.title,
+      slug: guide.slug,
+      description: guide.description || "",
+      content: guide.content || "",
+      category: guide.category || "General",
+      level: guide.level || "Beginner",
+      readTime: guide.readTime || "",
+      sortOrder: guide.sortOrder || 0,
+      status: guide.status,
+      metaTitle: guide.metaTitle || "",
+      metaDescription: guide.metaDescription || "",
+    });
+    setShowDialog(true);
+  };
+
+  const openCreate = () => {
+    resetForm();
+    setShowDialog(true);
+  };
+
+  const handleTitleChange = (title: string) => {
+    setGuideForm(prev => ({
+      ...prev,
+      title,
+      slug: editingGuide ? prev.slug : generateSlug(title),
+    }));
+  };
+
+  const handleSave = () => {
+    if (editingGuide) {
+      updateMutation.mutate({ id: editingGuide.id, data: guideForm });
+    } else {
+      createMutation.mutate(guideForm);
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    if (window.confirm("Are you sure you want to delete this guide?")) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <BookOpen className="h-4 w-4" /> Guides
+        </CardTitle>
+        <Dialog open={showDialog} onOpenChange={v => { if (!v) resetForm(); else openCreate(); }}>
+          <DialogTrigger asChild>
+            <Button size="sm" data-testid="button-add-guide">
+              <Plus className="h-4 w-4 mr-1" /> Add Guide
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingGuide ? "Edit Guide" : "Create New Guide"}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Input
+                    value={guideForm.title}
+                    onChange={e => handleTitleChange(e.target.value)}
+                    data-testid="input-guide-title"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Slug</Label>
+                  <Input
+                    value={guideForm.slug}
+                    onChange={e => setGuideForm(p => ({ ...p, slug: e.target.value }))}
+                    data-testid="input-guide-slug"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea
+                  value={guideForm.description}
+                  onChange={e => setGuideForm(p => ({ ...p, description: e.target.value }))}
+                  rows={3}
+                  data-testid="input-guide-description"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Content</Label>
+                <HtmlEditor
+                  value={guideForm.content}
+                  onChange={v => setGuideForm(p => ({ ...p, content: v }))}
+                  data-testid="input-guide-content"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select value={guideForm.category} onValueChange={v => setGuideForm(p => ({ ...p, category: v }))}>
+                    <SelectTrigger data-testid="select-guide-category">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="General">General</SelectItem>
+                      <SelectItem value="Analytics">Analytics</SelectItem>
+                      <SelectItem value="Privacy">Privacy</SelectItem>
+                      <SelectItem value="AI">AI</SelectItem>
+                      <SelectItem value="SEO">SEO</SelectItem>
+                      <SelectItem value="E-commerce">E-commerce</SelectItem>
+                      <SelectItem value="Management">Management</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Level</Label>
+                  <Select value={guideForm.level} onValueChange={v => setGuideForm(p => ({ ...p, level: v }))}>
+                    <SelectTrigger data-testid="select-guide-level">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Beginner">Beginner</SelectItem>
+                      <SelectItem value="Intermediate">Intermediate</SelectItem>
+                      <SelectItem value="Advanced">Advanced</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Read Time</Label>
+                  <Input
+                    value={guideForm.readTime}
+                    onChange={e => setGuideForm(p => ({ ...p, readTime: e.target.value }))}
+                    placeholder="10 min read"
+                    data-testid="input-guide-read-time"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Sort Order</Label>
+                  <Input
+                    type="number"
+                    value={guideForm.sortOrder}
+                    onChange={e => setGuideForm(p => ({ ...p, sortOrder: Number(e.target.value) }))}
+                    data-testid="input-guide-sort-order"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select value={guideForm.status} onValueChange={v => setGuideForm(p => ({ ...p, status: v }))}>
+                    <SelectTrigger data-testid="select-guide-status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="published">Published</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Meta Title</Label>
+                  <Input
+                    value={guideForm.metaTitle}
+                    onChange={e => setGuideForm(p => ({ ...p, metaTitle: e.target.value }))}
+                    data-testid="input-guide-meta-title"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Meta Description</Label>
+                  <Input
+                    value={guideForm.metaDescription}
+                    onChange={e => setGuideForm(p => ({ ...p, metaDescription: e.target.value }))}
+                    data-testid="input-guide-meta-description"
+                  />
+                </div>
+              </div>
+              <Button
+                className="w-full"
+                onClick={handleSave}
+                disabled={!guideForm.title || !guideForm.slug || createMutation.isPending || updateMutation.isPending}
+                data-testid="button-save-guide"
+              >
+                {(createMutation.isPending || updateMutation.isPending) ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                {editingGuide ? "Update Guide" : "Create Guide"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent>
+        {(!guides || guides.length === 0) ? (
+          <p className="text-sm text-muted-foreground text-center py-8" data-testid="text-no-guides">No guides yet</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 pr-4 font-medium text-muted-foreground">Title</th>
+                  <th className="text-left py-2 px-4 font-medium text-muted-foreground">Category</th>
+                  <th className="text-left py-2 px-4 font-medium text-muted-foreground">Level</th>
+                  <th className="text-left py-2 px-4 font-medium text-muted-foreground">Status</th>
+                  <th className="text-right py-2 pl-4 font-medium text-muted-foreground">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {guides.map(guide => (
+                  <tr key={guide.id} className="border-b last:border-0" data-testid={`row-guide-${guide.id}`}>
+                    <td className="py-3 pr-4 font-medium">{guide.title}</td>
+                    <td className="py-3 px-4">
+                      <Badge variant="secondary" data-testid={`badge-guide-category-${guide.id}`}>
+                        {guide.category}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-4">
+                      <Badge variant="secondary" data-testid={`badge-guide-level-${guide.id}`}>
+                        {guide.level}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-4">
+                      <Badge variant={guide.status === "published" ? "default" : "secondary"} data-testid={`badge-guide-status-${guide.id}`}>
+                        {guide.status}
+                      </Badge>
+                    </td>
+                    <td className="py-3 pl-4 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(guide)} data-testid={`button-edit-guide-${guide.id}`}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(guide.id)} data-testid={`button-delete-guide-${guide.id}`}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+interface CaseStudyData {
+  id: string;
+  title: string;
+  slug: string;
+  company: string;
+  industry: string;
+  summary: string;
+  content: string;
+  quote: string;
+  quoteAuthor: string;
+  metrics: string;
+  status: string;
+  metaTitle: string | null;
+  metaDescription: string | null;
+}
+
+function CaseStudiesTab() {
+  const { toast } = useToast();
+  const [showDialog, setShowDialog] = useState(false);
+  const [editingStudy, setEditingStudy] = useState<CaseStudyData | null>(null);
+  const [studyForm, setStudyForm] = useState({
+    title: "",
+    slug: "",
+    company: "",
+    industry: "",
+    summary: "",
+    content: "",
+    quote: "",
+    quoteAuthor: "",
+    metrics: "{}",
+    status: "draft",
+    metaTitle: "",
+    metaDescription: "",
+  });
+
+  const { data: studies, isLoading } = useQuery<CaseStudyData[]>({
+    queryKey: ["/api/admin/case-studies"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/case-studies", { credentials: "include" });
+      return res.json();
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: typeof studyForm) => {
+      const parsed = { ...data, metrics: JSON.parse(data.metrics) };
+      await apiRequest("POST", "/api/admin/case-studies", parsed);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/case-studies"] });
+      toast({ title: "Case study created" });
+      resetForm();
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: typeof studyForm }) => {
+      const parsed = { ...data, metrics: JSON.parse(data.metrics) };
+      await apiRequest("PATCH", `/api/admin/case-studies/${id}`, parsed);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/case-studies"] });
+      toast({ title: "Case study updated" });
+      resetForm();
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/admin/case-studies/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/case-studies"] });
+      toast({ title: "Case study deleted" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const resetForm = () => {
+    setShowDialog(false);
+    setEditingStudy(null);
+    setStudyForm({ title: "", slug: "", company: "", industry: "", summary: "", content: "", quote: "", quoteAuthor: "", metrics: "{}", status: "draft", metaTitle: "", metaDescription: "" });
+  };
+
+  const openEdit = (study: CaseStudyData) => {
+    setEditingStudy(study);
+    setStudyForm({
+      title: study.title,
+      slug: study.slug,
+      company: study.company || "",
+      industry: study.industry || "",
+      summary: study.summary || "",
+      content: study.content || "",
+      quote: study.quote || "",
+      quoteAuthor: study.quoteAuthor || "",
+      metrics: typeof study.metrics === "object" ? JSON.stringify(study.metrics, null, 2) : (study.metrics || "{}"),
+      status: study.status,
+      metaTitle: study.metaTitle || "",
+      metaDescription: study.metaDescription || "",
+    });
+    setShowDialog(true);
+  };
+
+  const openCreate = () => {
+    resetForm();
+    setShowDialog(true);
+  };
+
+  const handleTitleChange = (title: string) => {
+    setStudyForm(prev => ({
+      ...prev,
+      title,
+      slug: editingStudy ? prev.slug : generateSlug(title),
+    }));
+  };
+
+  const handleSave = () => {
+    try {
+      JSON.parse(studyForm.metrics);
+    } catch {
+      toast({ title: "Invalid JSON in metrics field", variant: "destructive" });
+      return;
+    }
+    if (editingStudy) {
+      updateMutation.mutate({ id: editingStudy.id, data: studyForm });
+    } else {
+      createMutation.mutate(studyForm);
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    if (window.confirm("Are you sure you want to delete this case study?")) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <FileText className="h-4 w-4" /> Case Studies
+        </CardTitle>
+        <Dialog open={showDialog} onOpenChange={v => { if (!v) resetForm(); else openCreate(); }}>
+          <DialogTrigger asChild>
+            <Button size="sm" data-testid="button-add-case-study">
+              <Plus className="h-4 w-4 mr-1" /> Add Case Study
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingStudy ? "Edit Case Study" : "Create New Case Study"}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Input
+                    value={studyForm.title}
+                    onChange={e => handleTitleChange(e.target.value)}
+                    data-testid="input-case-study-title"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Slug</Label>
+                  <Input
+                    value={studyForm.slug}
+                    onChange={e => setStudyForm(p => ({ ...p, slug: e.target.value }))}
+                    data-testid="input-case-study-slug"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Company</Label>
+                  <Input
+                    value={studyForm.company}
+                    onChange={e => setStudyForm(p => ({ ...p, company: e.target.value }))}
+                    data-testid="input-case-study-company"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Industry</Label>
+                  <Input
+                    value={studyForm.industry}
+                    onChange={e => setStudyForm(p => ({ ...p, industry: e.target.value }))}
+                    data-testid="input-case-study-industry"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Summary</Label>
+                <Textarea
+                  value={studyForm.summary}
+                  onChange={e => setStudyForm(p => ({ ...p, summary: e.target.value }))}
+                  rows={3}
+                  data-testid="input-case-study-summary"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Content</Label>
+                <HtmlEditor
+                  value={studyForm.content}
+                  onChange={v => setStudyForm(p => ({ ...p, content: v }))}
+                  data-testid="input-case-study-content"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Quote</Label>
+                <Textarea
+                  value={studyForm.quote}
+                  onChange={e => setStudyForm(p => ({ ...p, quote: e.target.value }))}
+                  rows={3}
+                  data-testid="input-case-study-quote"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Quote Author</Label>
+                  <Input
+                    value={studyForm.quoteAuthor}
+                    onChange={e => setStudyForm(p => ({ ...p, quoteAuthor: e.target.value }))}
+                    data-testid="input-case-study-quote-author"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select value={studyForm.status} onValueChange={v => setStudyForm(p => ({ ...p, status: v }))}>
+                    <SelectTrigger data-testid="select-case-study-status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="published">Published</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Metrics (JSON)</Label>
+                <Textarea
+                  value={studyForm.metrics}
+                  onChange={e => setStudyForm(p => ({ ...p, metrics: e.target.value }))}
+                  rows={5}
+                  className="font-mono text-sm"
+                  data-testid="input-case-study-metrics"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Meta Title</Label>
+                  <Input
+                    value={studyForm.metaTitle}
+                    onChange={e => setStudyForm(p => ({ ...p, metaTitle: e.target.value }))}
+                    data-testid="input-case-study-meta-title"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Meta Description</Label>
+                  <Input
+                    value={studyForm.metaDescription}
+                    onChange={e => setStudyForm(p => ({ ...p, metaDescription: e.target.value }))}
+                    data-testid="input-case-study-meta-description"
+                  />
+                </div>
+              </div>
+              <Button
+                className="w-full"
+                onClick={handleSave}
+                disabled={!studyForm.title || !studyForm.slug || createMutation.isPending || updateMutation.isPending}
+                data-testid="button-save-case-study"
+              >
+                {(createMutation.isPending || updateMutation.isPending) ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                {editingStudy ? "Update Case Study" : "Create Case Study"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent>
+        {(!studies || studies.length === 0) ? (
+          <p className="text-sm text-muted-foreground text-center py-8" data-testid="text-no-case-studies">No case studies yet</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 pr-4 font-medium text-muted-foreground">Company</th>
+                  <th className="text-left py-2 px-4 font-medium text-muted-foreground">Title</th>
+                  <th className="text-left py-2 px-4 font-medium text-muted-foreground">Industry</th>
+                  <th className="text-left py-2 px-4 font-medium text-muted-foreground">Status</th>
+                  <th className="text-right py-2 pl-4 font-medium text-muted-foreground">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {studies.map(study => (
+                  <tr key={study.id} className="border-b last:border-0" data-testid={`row-case-study-${study.id}`}>
+                    <td className="py-3 pr-4 font-medium">{study.company}</td>
+                    <td className="py-3 px-4">{study.title}</td>
+                    <td className="py-3 px-4">
+                      <Badge variant="secondary" data-testid={`badge-case-study-industry-${study.id}`}>
+                        {study.industry}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-4">
+                      <Badge variant={study.status === "published" ? "default" : "secondary"} data-testid={`badge-case-study-status-${study.id}`}>
+                        {study.status}
+                      </Badge>
+                    </td>
+                    <td className="py-3 pl-4 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(study)} data-testid={`button-edit-case-study-${study.id}`}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(study.id)} data-testid={`button-delete-case-study-${study.id}`}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AdminPage() {
   const { user } = useAuth();
 
@@ -1660,6 +2779,51 @@ export default function AdminPage() {
     );
   }
 
+  const [activeSection, setActiveSection] = useState("site-settings");
+
+  const navGroups = [
+    {
+      label: "General",
+      items: [
+        { id: "site-settings", label: "Site Settings", icon: Globe },
+        { id: "smtp", label: "SMTP", icon: Mail },
+        { id: "tracking", label: "Tracking Codes", icon: Code },
+        { id: "payments", label: "Payment Gateways", icon: CreditCard },
+      ],
+    },
+    {
+      label: "Content",
+      items: [
+        { id: "pages", label: "Pages", icon: FileText },
+        { id: "files", label: "Files", icon: Image },
+        { id: "blog-posts", label: "Blog Posts", icon: BookOpen },
+        { id: "guides", label: "Guides", icon: BookOpen },
+        { id: "case-studies", label: "Case Studies", icon: FileText },
+      ],
+    },
+    {
+      label: "People",
+      items: [
+        { id: "users", label: "Users", icon: Users },
+        { id: "contacts", label: "Contacts", icon: MessageSquare },
+      ],
+    },
+  ];
+
+  const sectionComponents: Record<string, JSX.Element> = {
+    "site-settings": <SiteSettingsTab />,
+    "smtp": <SmtpTab />,
+    "pages": <PagesTab />,
+    "files": <FilesTab />,
+    "users": <UsersTab />,
+    "contacts": <ContactsTab />,
+    "tracking": <TrackingCodesTab />,
+    "payments": <PaymentGatewaysTab />,
+    "blog-posts": <BlogPostsTab />,
+    "guides": <GuidesTab />,
+    "case-studies": <CaseStudiesTab />,
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
@@ -1670,58 +2834,41 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="site-settings" data-testid="admin-tabs">
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="site-settings" data-testid="tab-site-settings">
-            <Globe className="h-4 w-4 mr-1" /> Site Settings
-          </TabsTrigger>
-          <TabsTrigger value="smtp" data-testid="tab-smtp">
-            <Mail className="h-4 w-4 mr-1" /> SMTP
-          </TabsTrigger>
-          <TabsTrigger value="pages" data-testid="tab-pages">
-            <FileText className="h-4 w-4 mr-1" /> Pages
-          </TabsTrigger>
-          <TabsTrigger value="files" data-testid="tab-files">
-            <Image className="h-4 w-4 mr-1" /> Files
-          </TabsTrigger>
-          <TabsTrigger value="users" data-testid="tab-users">
-            <Users className="h-4 w-4 mr-1" /> Users
-          </TabsTrigger>
-          <TabsTrigger value="contacts" data-testid="tab-contacts">
-            <MessageSquare className="h-4 w-4 mr-1" /> Contacts
-          </TabsTrigger>
-          <TabsTrigger value="tracking" data-testid="tab-tracking">
-            <Code className="h-4 w-4 mr-1" /> Tracking Codes
-          </TabsTrigger>
-          <TabsTrigger value="payments" data-testid="tab-payments">
-            <CreditCard className="h-4 w-4 mr-1" /> Payment Gateways
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="site-settings" className="mt-4">
-          <SiteSettingsTab />
-        </TabsContent>
-        <TabsContent value="smtp" className="mt-4">
-          <SmtpTab />
-        </TabsContent>
-        <TabsContent value="pages" className="mt-4">
-          <PagesTab />
-        </TabsContent>
-        <TabsContent value="files" className="mt-4">
-          <FilesTab />
-        </TabsContent>
-        <TabsContent value="users" className="mt-4">
-          <UsersTab />
-        </TabsContent>
-        <TabsContent value="contacts" className="mt-4">
-          <ContactsTab />
-        </TabsContent>
-        <TabsContent value="tracking" className="mt-4">
-          <TrackingCodesTab />
-        </TabsContent>
-        <TabsContent value="payments" className="mt-4">
-          <PaymentGatewaysTab />
-        </TabsContent>
-      </Tabs>
+      <FeatureGuide {...GUIDE_CONFIGS.admin} />
+
+      <div className="flex gap-6" data-testid="admin-tabs">
+        <nav className="w-56 shrink-0 space-y-5">
+          {navGroups.map(group => (
+            <div key={group.label}>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-3">{group.label}</p>
+              <div className="space-y-0.5">
+                {group.items.map(item => {
+                  const Icon = item.icon;
+                  const isActive = activeSection === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveSection(item.id)}
+                      data-testid={`tab-${item.id}`}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors ${
+                        isActive
+                          ? "bg-primary text-primary-foreground font-medium"
+                          : "text-muted-foreground hover-elevate"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </nav>
+        <div className="flex-1 min-w-0">
+          {sectionComponents[activeSection]}
+        </div>
+      </div>
     </div>
   );
 }

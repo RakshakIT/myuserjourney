@@ -1,11 +1,31 @@
+import { useState } from "react";
 import { PublicLayout } from "@/components/public-navbar";
 import { SEOHead, seoData } from "@/components/seo-head";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Calendar, Clock, User } from "lucide-react";
+import { ArrowRight, Calendar, Clock, User, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 
-const posts = [
+interface BlogPost {
+  id: number;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  category: string;
+  author: string;
+  readTime: string;
+  featuredImage: string | null;
+  metaTitle: string | null;
+  metaDescription: string | null;
+  ogImage: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const fallbackPosts = [
   {
     title: "Introducing Predictive Analytics: AI-Powered Churn and Revenue Forecasting",
     excerpt: "Our latest AI feature helps you predict churn risk, forecast revenue trends, and estimate conversion probability using your existing analytics data.",
@@ -56,9 +76,32 @@ const posts = [
   },
 ];
 
-const categories = ["All", "Product", "Privacy", "Tutorial", "Insights"];
+const defaultCategories = ["All", "Product", "Privacy", "Tutorial", "Insights"];
 
 export default function BlogPage() {
+  const [activeCategory, setActiveCategory] = useState("All");
+
+  const { data: fetchedPosts, isLoading } = useQuery<BlogPost[]>({
+    queryKey: ["/api/public/blog-posts"],
+  });
+
+  const hasFetchedPosts = fetchedPosts && fetchedPosts.length > 0;
+
+  const categories = hasFetchedPosts
+    ? ["All", ...Array.from(new Set(fetchedPosts.map((p) => p.category).filter(Boolean)))]
+    : defaultCategories;
+
+  const filteredFetchedPosts = hasFetchedPosts
+    ? activeCategory === "All"
+      ? fetchedPosts
+      : fetchedPosts.filter((p) => p.category === activeCategory)
+    : [];
+
+  const filteredFallbackPosts =
+    activeCategory === "All"
+      ? fallbackPosts
+      : fallbackPosts.filter((p) => p.category === activeCategory);
+
   return (
     <PublicLayout>
       <SEOHead title={seoData.blog.title} description={seoData.blog.description} keywords={seoData.blog.keywords} canonicalUrl="https://myuserjourney.co.uk/blog" />
@@ -82,47 +125,89 @@ export default function BlogPage() {
           {categories.map((cat) => (
             <Badge
               key={cat}
-              variant={cat === "All" ? "default" : "secondary"}
+              variant={cat === activeCategory ? "default" : "secondary"}
               className="cursor-pointer"
               data-testid={`badge-category-${cat.toLowerCase()}`}
+              onClick={() => setActiveCategory(cat)}
             >
               {cat}
             </Badge>
           ))}
         </div>
 
-        <div className="space-y-6">
-          {posts.map((post, i) => (
-            <Card key={i} className="hover-elevate cursor-pointer" data-testid={`card-post-${i}`}>
-              <CardContent className="p-6">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <Badge variant="secondary" className="text-xs">{post.category}</Badge>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      {post.date}
+        {isLoading && (
+          <div className="flex items-center justify-center py-12" data-testid="loading-spinner">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {!isLoading && (
+          <div className="space-y-6">
+            {filteredFetchedPosts.map((post) => (
+              <Link key={post.id} href={"/blog/" + post.slug}>
+                <Card className="hover-elevate cursor-pointer" data-testid={`card-post-${post.id}`}>
+                  <CardContent className="p-6">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <Badge variant="secondary" className="text-xs">{post.category}</Badge>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          {new Date(post.createdAt).toLocaleDateString("en-GB", { month: "short", day: "numeric", year: "numeric" })}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          {post.readTime}
+                        </div>
+                      </div>
+                      <h2 className="text-lg font-semibold">{post.title}</h2>
+                      <p className="text-sm text-muted-foreground">{post.excerpt}</p>
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <User className="h-3 w-3" />
+                          {post.author}
+                        </div>
+                        <span className="text-sm text-primary font-medium flex items-center gap-1">
+                          Read more <ArrowRight className="h-3 w-3" />
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      {post.readTime}
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+
+            {!hasFetchedPosts && filteredFallbackPosts.map((post, i) => (
+              <Card key={i} className="hover-elevate cursor-pointer" data-testid={`card-post-${i}`}>
+                <CardContent className="p-6">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <Badge variant="secondary" className="text-xs">{post.category}</Badge>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        {post.date}
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        {post.readTime}
+                      </div>
+                    </div>
+                    <h2 className="text-lg font-semibold">{post.title}</h2>
+                    <p className="text-sm text-muted-foreground">{post.excerpt}</p>
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <User className="h-3 w-3" />
+                        {post.author}
+                      </div>
+                      <span className="text-sm text-primary font-medium flex items-center gap-1">
+                        Read more <ArrowRight className="h-3 w-3" />
+                      </span>
                     </div>
                   </div>
-                  <h2 className="text-lg font-semibold">{post.title}</h2>
-                  <p className="text-sm text-muted-foreground">{post.excerpt}</p>
-                  <div className="flex items-center justify-between gap-2 pt-1">
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <User className="h-3 w-3" />
-                      {post.author}
-                    </div>
-                    <span className="text-sm text-primary font-medium flex items-center gap-1">
-                      Read more <ArrowRight className="h-3 w-3" />
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </section>
     </PublicLayout>
   );

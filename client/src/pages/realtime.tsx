@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Zap, Users, Eye, Activity } from "lucide-react";
 import { ExportMenu } from "@/components/export-menu";
+import { FeatureGuide, GUIDE_CONFIGS } from "@/components/feature-guide";
 
 interface RealtimeData {
   activeUsers30: number;
@@ -67,6 +68,7 @@ export default function RealtimePage() {
 
   return (
     <div className="p-6 space-y-6">
+      <FeatureGuide {...GUIDE_CONFIGS.realtime} />
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <Zap className="h-5 w-5 text-primary" />

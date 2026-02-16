@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Link } from "wouter";
 import {
   Search,
   MessageSquare,
@@ -17,6 +18,8 @@ import {
   BarChart3,
 } from "lucide-react";
 import { useState } from "react";
+
+const slugify = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
 const helpTopics = [
   {
@@ -107,9 +110,11 @@ export default function HelpCenterPage() {
                 </div>
                 <ul className="space-y-2">
                   {topic.articles.map((article) => (
-                    <li key={article} className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground">
-                      <ArrowRight className="h-3 w-3 shrink-0" />
-                      {article}
+                    <li key={article} className="text-sm text-muted-foreground">
+                      <Link href={"/help-center/" + slugify(article)} className="flex items-center gap-2 cursor-pointer hover:text-foreground" data-testid={`link-article-${slugify(article)}`}>
+                        <ArrowRight className="h-3 w-3 shrink-0" />
+                        {article}
+                      </Link>
                     </li>
                   ))}
                 </ul>
@@ -126,14 +131,18 @@ export default function HelpCenterPage() {
             Our support team is ready to help you with any questions about My User Journey.
           </p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
-            <Button data-testid="button-contact-support">
-              <MessageSquare className="mr-2 h-4 w-4" />
-              Contact Support
-            </Button>
-            <Button variant="outline" data-testid="button-email-support">
-              <Mail className="mr-2 h-4 w-4" />
-              Email Us
-            </Button>
+            <Link href="/contact">
+              <Button data-testid="button-contact-support">
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Contact Support
+              </Button>
+            </Link>
+            <a href="mailto:support@myuserjourney.co.uk">
+              <Button variant="outline" data-testid="button-email-support">
+                <Mail className="mr-2 h-4 w-4" />
+                Email Us
+              </Button>
+            </a>
           </div>
         </div>
       </section>
