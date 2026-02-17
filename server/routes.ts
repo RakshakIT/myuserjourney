@@ -4191,74 +4191,213 @@ Give 3-5 key insights with specific recommendations. Format with markdown.`;
       const { domain } = req.body;
       if (!domain) return res.status(400).json({ message: "Domain is required" });
 
-      const cleanDomain = domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
+      const cleanDomain = domain.replace(/^https?:\/\//, "").replace(/\/$/, "").replace(/[^a-zA-Z0-9.\-]/g, "");
 
-      const systemPrompt = `You are an expert SEO analyst and web researcher. Analyze the domain "${cleanDomain}" comprehensively.
+      const blockedPatterns = /^(localhost|127\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|0\.|169\.254\.|::1|fc|fd|fe80)/i;
+      if (blockedPatterns.test(cleanDomain)) {
+        return res.status(400).json({ message: "Invalid domain: private or local addresses are not allowed" });
+      }
+      if (!cleanDomain.includes(".") || cleanDomain.length < 4) {
+        return res.status(400).json({ message: "Please enter a valid domain name" });
+      }
+
+      let crawledPages: string[] = [];
+      let crawledTitle = "";
+      let crawledDescription = "";
+      let crawledLinks: string[] = [];
+      let crawlError = "";
+
+      try {
+        const homepageUrl = `https://${cleanDomain}`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+        const homeRes = await fetch(homepageUrl, {
+          signal: controller.signal,
+          headers: { "User-Agent": "MyUserJourney-SiteResearch/1.0" },
+        });
+        clearTimeout(timeout);
+        const html = await homeRes.text();
+
+        const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
+        crawledTitle = titleMatch ? titleMatch[1].trim() : "";
+
+        const descMatch = html.match(/<meta\s+name=["']description["']\s+content=["'](.*?)["']/i)
+          || html.match(/<meta\s+content=["'](.*?)["']\s+name=["']description["']/i);
+        crawledDescription = descMatch ? descMatch[1].trim() : "";
+
+        const hrefRegex = /href=["']\/([\w\-\/]+?)["']/g;
+        const foundPaths = new Set<string>();
+        let match;
+        while ((match = hrefRegex.exec(html)) !== null) {
+          const path = "/" + match[1].replace(/\/$/, "");
+          if (path.length > 1 && !path.includes(".") && !path.startsWith("/wp-") && !path.startsWith("/cdn-")) {
+            foundPaths.add(path);
+          }
+        }
+        crawledPages = Array.from(foundPaths).slice(0, 50);
+
+        const navRegex = /<nav[^>]*>([\s\S]*?)<\/nav>/gi;
+        let navMatch;
+        while ((navMatch = navRegex.exec(html)) !== null) {
+          const navHtml = navMatch[1];
+          const navLinks = navHtml.match(/href=["']\/([\w\-\/]+?)["']/g) || [];
+          navLinks.forEach(l => {
+            const p = "/" + l.replace(/href=["']\//, "").replace(/["']/, "").replace(/\/$/, "");
+            if (p.length > 1) crawledLinks.push(p);
+          });
+        }
+
+        try {
+          const sitemapUrl = `https://${cleanDomain}/sitemap.xml`;
+          const smController = new AbortController();
+          const smTimeout = setTimeout(() => smController.abort(), 8000);
+          const smRes = await fetch(sitemapUrl, {
+            signal: smController.signal,
+            headers: { "User-Agent": "MyUserJourney-SiteResearch/1.0" },
+          });
+          clearTimeout(smTimeout);
+          if (smRes.ok) {
+            const smText = await smRes.text();
+            const locRegex = /<loc>(.*?)<\/loc>/g;
+            let locMatch;
+            while ((locMatch = locRegex.exec(smText)) !== null) {
+              try {
+                const url = new URL(locMatch[1]);
+                if (url.pathname && url.pathname !== "/") {
+                  crawledPages.push(url.pathname);
+                }
+              } catch {}
+            }
+            crawledPages = Array.from(new Set(crawledPages)).slice(0, 100);
+          }
+        } catch {}
+      } catch (e: any) {
+        crawlError = e.message || "Could not reach the website";
+      }
+
+      const crawlContext = crawledPages.length > 0
+        ? `\n\nVERIFIED SITE DATA (from actual crawl of ${cleanDomain}):
+- Page title: "${crawledTitle}"
+- Meta description: "${crawledDescription}"
+- Verified pages found on the site: ${crawledPages.join(", ")}
+- Navigation links: ${crawledLinks.length > 0 ? crawledLinks.join(", ") : "N/A"}
+
+IMPORTANT: You MUST ONLY use pages from the verified list above in your topPages, organicKeywords URLs, paidKeywords URLs, and siteStructure subfolders. Do NOT invent any pages or URLs that are not in this verified list.`
+        : crawlError
+          ? `\n\nWARNING: Could not crawl ${cleanDomain} (${crawlError}). Since we cannot verify which pages exist, return EMPTY arrays for organicKeywords, topPages, paidKeywords, and siteStructure subfolders. Only provide the overview with a description if you know what this business does, and opportunities based on general best practices. Set all numeric estimates to 0 if you are unsure.`
+          : `\n\nWARNING: No pages could be verified for ${cleanDomain}. Return EMPTY arrays for data that requires verified URLs.`;
+
+      const systemPrompt = `You are an expert SEO analyst. Analyze the domain "${cleanDomain}" based on verified crawl data provided below.
+
+CRITICAL RULES:
+1. ONLY reference pages that appear in the VERIFIED SITE DATA below. Do NOT invent or guess any pages or URLs.
+2. For keywords, only include terms directly relevant to the verified pages and content found on the site.
+3. For backlinks referring domains, leave the array empty (we cannot verify backlinks without a real SEO tool).
+4. For competitors, only include real businesses you know exist in the same industry.
+5. All traffic numbers, keyword volumes, and positions are ESTIMATES. Use conservative values.
+6. If you don't know something, use 0 or "Unknown" rather than guessing.
+7. The description must accurately reflect what the site actually does based on the crawled title and description.
+${crawlContext}
+
 Return JSON with this exact structure:
 {
   "overview": {
     "domain": "${cleanDomain}",
-    "authorityScore": number (0-100),
+    "authorityScore": number (0-100, conservative),
     "estimatedMonthlyTraffic": number,
-    "totalBacklinks": number,
-    "referringDomains": number,
+    "totalBacklinks": number (use 0 if unknown),
+    "referringDomains": number (use 0 if unknown),
     "organicKeywordsCount": number,
-    "paidKeywordsCount": number,
-    "domainAge": "string",
+    "paidKeywordsCount": number (use 0 if unknown),
+    "domainAge": "string or Unknown",
     "topCountry": "string",
     "topCountryShare": number,
     "trafficTrend": "up|down|stable",
-    "trafficChange": number (percent),
+    "trafficChange": number,
     "category": "string",
-    "description": "string"
+    "description": "string based on actual crawled data"
   },
   "organicKeywords": [
-    { "keyword": "string", "position": number, "volume": number, "difficulty": number, "cpc": number, "url": "string", "traffic": number, "trafficShare": number }
+    { "keyword": "string", "position": number, "volume": number, "difficulty": number, "cpc": number, "url": "string (MUST be from verified pages)", "traffic": number, "trafficShare": number }
   ],
   "topPages": [
-    { "url": "string", "traffic": number, "keywords": number, "backlinks": number, "topKeyword": "string" }
+    { "url": "string (MUST be from verified pages)", "traffic": number, "keywords": number, "backlinks": number, "topKeyword": "string" }
   ],
   "backlinks": {
-    "total": number,
-    "dofollow": number,
-    "nofollow": number,
-    "topAnchors": [{ "text": "string", "count": number, "share": number }],
-    "topReferringDomains": [{ "domain": "string", "backlinks": number, "authorityScore": number, "dofollow": number }]
+    "total": 0,
+    "dofollow": 0,
+    "nofollow": 0,
+    "topAnchors": [],
+    "topReferringDomains": []
   },
   "competitors": [
-    { "domain": "string", "commonKeywords": number, "authorityScore": number, "estimatedTraffic": number, "overlap": number }
+    { "domain": "string (real competitors only)", "commonKeywords": number, "authorityScore": number, "estimatedTraffic": number, "overlap": number }
   ],
-  "paidKeywords": [
-    { "keyword": "string", "position": number, "volume": number, "cpc": number, "competition": "low|medium|high", "url": "string" }
-  ],
+  "paidKeywords": [],
   "siteStructure": {
-    "totalPages": number,
+    "totalPages": ${crawledPages.length || 0},
     "avgPageDepth": number,
-    "topSubfolders": [{ "path": "string", "pages": number, "traffic": number }]
+    "topSubfolders": [{ "path": "string (from verified pages)", "pages": number, "traffic": number }]
   },
   "opportunities": [
     { "type": "keyword|content|technical|backlink", "title": "string", "description": "string", "impact": "high|medium|low", "effort": "easy|medium|hard" }
   ]
-}
-Provide realistic, data-driven estimates. Include at least 15 organic keywords, 8 top pages, 10 referring domains, 5 competitors, 8 paid keywords, 5 subfolders, and 8 opportunities. Make data plausible for the domain type.`;
+}`;
 
-      const result = await aiChatJSON(systemPrompt, `Analyze the website ${cleanDomain} comprehensively`);
+      const result = await aiChatJSON(systemPrompt, `Analyze the website ${cleanDomain} based on the verified crawl data provided`);
       if (result.usage.model !== "fallback") {
         await storage.logAiUsage({ userId: user.id, feature: "site-research", model: result.usage.model, inputTokens: result.usage.inputTokens, outputTokens: result.usage.outputTokens, costUsd: calculateCostUsd(result.usage.inputTokens, result.usage.outputTokens) });
       }
 
+      const data = result.data;
+      const verifiedSet = new Set(crawledPages.map((p: string) => p.toLowerCase()));
+
+      const filterByVerifiedUrl = (items: any[], urlField: string) => {
+        if (crawledPages.length === 0) return [];
+        return (items || []).filter((item: any) => {
+          const url = item[urlField];
+          if (!url) return false;
+          const path = url.replace(`https://${cleanDomain}`, "").replace(`http://${cleanDomain}`, "");
+          return verifiedSet.has(path.toLowerCase()) || verifiedSet.has(path.toLowerCase().replace(/\/$/, ""));
+        });
+      };
+
+      const filteredOrganicKeywords = filterByVerifiedUrl(data.organicKeywords || [], "url");
+      const filteredTopPages = filterByVerifiedUrl(data.topPages || [], "url");
+      const filteredPaidKeywords = filterByVerifiedUrl(data.paidKeywords || [], "url");
+
+      const filteredStructure = data.siteStructure || {};
+      if (filteredStructure.topSubfolders && crawledPages.length > 0) {
+        filteredStructure.topSubfolders = (filteredStructure.topSubfolders || []).filter((sf: any) => {
+          const sfPath = sf.path?.toLowerCase();
+          return crawledPages.some((p: string) => p.toLowerCase().startsWith(sfPath));
+        });
+      } else if (crawledPages.length === 0) {
+        filteredStructure.topSubfolders = [];
+        filteredStructure.totalPages = 0;
+      }
+      filteredStructure.totalPages = crawledPages.length;
+
+      const sanitizedBacklinks = {
+        total: 0,
+        dofollow: 0,
+        nofollow: 0,
+        topAnchors: [],
+        topReferringDomains: [],
+      };
+
       const report = await storage.createSiteResearchReport({
         userId: user.id,
         domain: cleanDomain,
-        overview: result.data.overview || {},
-        organicKeywords: result.data.organicKeywords || [],
-        topPages: result.data.topPages || [],
-        backlinks: result.data.backlinks || {},
-        competitors: result.data.competitors || [],
-        paidKeywords: result.data.paidKeywords || [],
-        internalLinks: result.data.internalLinks || null,
-        siteStructure: result.data.siteStructure || {},
-        opportunities: result.data.opportunities || [],
+        overview: data.overview || {},
+        organicKeywords: filteredOrganicKeywords,
+        topPages: filteredTopPages,
+        backlinks: sanitizedBacklinks,
+        competitors: data.competitors || [],
+        paidKeywords: filteredPaidKeywords,
+        internalLinks: data.internalLinks || null,
+        siteStructure: filteredStructure,
+        opportunities: data.opportunities || [],
         status: "completed",
       });
       res.status(201).json(report);

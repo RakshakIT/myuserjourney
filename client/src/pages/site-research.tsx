@@ -26,6 +26,7 @@ import {
   ChevronRight,
   Clock,
   Layers,
+  AlertTriangle,
 } from "lucide-react";
 import {
   Table,
@@ -202,7 +203,21 @@ function TopPagesTab({ pages }: { pages: any[] }) {
 }
 
 function BacklinksTab({ backlinks }: { backlinks: any }) {
-  if (!backlinks) return <p className="text-muted-foreground">No backlink data available.</p>;
+  const hasData = backlinks && (backlinks.total > 0 || backlinks.topReferringDomains?.length > 0);
+  if (!hasData) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center space-y-2">
+          <Link2 className="h-8 w-8 text-muted-foreground mx-auto" />
+          <p className="font-medium">Backlink Data Not Available</p>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            Backlink analysis requires integration with third-party SEO tools such as Ahrefs, Moz, or SEMrush.
+            This feature will be available in a future update with API integrations.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-4">
@@ -247,33 +262,6 @@ function BacklinksTab({ backlinks }: { backlinks: any }) {
                     <TableCell className="text-right">{formatNumber(d.backlinks || 0)}</TableCell>
                     <TableCell className="text-right">{d.authorityScore || 0}</TableCell>
                     <TableCell className="text-right">{formatNumber(d.dofollow || 0)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-      {backlinks.topAnchors?.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Top Anchor Texts</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Anchor Text</TableHead>
-                  <TableHead className="text-right">Count</TableHead>
-                  <TableHead className="text-right">Share</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {backlinks.topAnchors.map((a: any, i: number) => (
-                  <TableRow key={i}>
-                    <TableCell className="font-medium">{a.text}</TableCell>
-                    <TableCell className="text-right">{formatNumber(a.count || 0)}</TableCell>
-                    <TableCell className="text-right">{(a.share || 0).toFixed(1)}%</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -438,12 +426,24 @@ function ReportDetail({ report, onBack }: { report: any; onBack: () => void }) {
         <h2 className="text-lg font-semibold" data-testid="text-report-domain">{report.domain}</h2>
         <Badge variant="outline">{report.status}</Badge>
       </div>
+      <Card className="border-amber-500/30 bg-amber-500/5" data-testid="card-ai-disclaimer">
+        <CardContent className="p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="text-sm font-medium">AI-Generated Estimates</p>
+            <p className="text-xs text-muted-foreground">
+              Pages and site structure are verified by crawling the actual website. However, traffic volumes, keyword positions,
+              and other metrics are AI-generated estimates and may not reflect exact real-world values. Backlink data requires
+              third-party tools (Ahrefs, SEMrush) and is not available in this report. For precise metrics, cross-reference with Google Search Console or dedicated SEO tools.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
       <Tabs defaultValue="overview">
         <TabsList className="flex-wrap">
           <TabsTrigger value="overview" data-testid="tab-overview"><Globe className="h-3.5 w-3.5 mr-1" /> Overview</TabsTrigger>
           <TabsTrigger value="organic" data-testid="tab-organic"><Search className="h-3.5 w-3.5 mr-1" /> Organic</TabsTrigger>
           <TabsTrigger value="pages" data-testid="tab-pages"><FileText className="h-3.5 w-3.5 mr-1" /> Pages</TabsTrigger>
-          <TabsTrigger value="backlinks" data-testid="tab-backlinks"><Link2 className="h-3.5 w-3.5 mr-1" /> Backlinks</TabsTrigger>
           <TabsTrigger value="competitors" data-testid="tab-competitors"><Target className="h-3.5 w-3.5 mr-1" /> Competitors</TabsTrigger>
           <TabsTrigger value="paid" data-testid="tab-paid"><BarChart3 className="h-3.5 w-3.5 mr-1" /> Paid</TabsTrigger>
           <TabsTrigger value="structure" data-testid="tab-structure"><Layers className="h-3.5 w-3.5 mr-1" /> Structure</TabsTrigger>
@@ -452,7 +452,6 @@ function ReportDetail({ report, onBack }: { report: any; onBack: () => void }) {
         <TabsContent value="overview"><OverviewTab overview={report.overview} /></TabsContent>
         <TabsContent value="organic"><OrganicKeywordsTab keywords={report.organicKeywords} /></TabsContent>
         <TabsContent value="pages"><TopPagesTab pages={report.topPages} /></TabsContent>
-        <TabsContent value="backlinks"><BacklinksTab backlinks={report.backlinks} /></TabsContent>
         <TabsContent value="competitors"><CompetitorsTab competitors={report.competitors} /></TabsContent>
         <TabsContent value="paid"><PaidKeywordsTab keywords={report.paidKeywords} /></TabsContent>
         <TabsContent value="structure"><SiteStructureTab structure={report.siteStructure} /></TabsContent>
@@ -510,7 +509,7 @@ export default function SiteResearchPage() {
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold" data-testid="text-page-title">Site Research</h1>
-        <p className="text-muted-foreground">Analyze any domain for SEO metrics, keywords, backlinks, competitors, and growth opportunities.</p>
+        <p className="text-muted-foreground">Analyze any domain using AI-powered estimates for SEO metrics, keywords, backlinks, competitors, and growth opportunities. Results are approximations, not verified data.</p>
       </div>
 
       <AiApiNotice />
