@@ -510,8 +510,18 @@ Found a vulnerability? Please report it responsibly. See our [Security Policy](S
 
 ---
 
+## Author
+
+**Rakshak Mathur** - Sole architect, designer, and developer
+
+- LinkedIn: [linkedin.com/in/rakshakmathur](https://uk.linkedin.com/in/rakshakmathur)
+- Website: [myuserjourney.co.uk](https://myuserjourney.co.uk)
+- GitHub: [RakshakIT](https://github.com/RakshakIT)
+
+---
+
 ## License
 
 MyUserJourney is open source under the [MIT License](LICENSE).
 
-Copyright (c) 2026 RakshakIT. All rights reserved.
+Copyright (c) 2026 Rakshak Mathur. All rights reserved.
