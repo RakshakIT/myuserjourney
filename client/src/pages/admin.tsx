@@ -13,7 +13,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
   Shield, Users, Settings, Save, Trash2, Plus, Mail, FileText,
-  Upload, Copy, Globe, MessageSquare, Image, File, Loader2, Send, Eye, Code, CreditCard, BookOpen
+  Upload, Copy, Globe, MessageSquare, Image, File, Loader2, Send, Eye, Code, CreditCard, BookOpen, CheckCircle
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FeatureGuide, GUIDE_CONFIGS } from "@/components/feature-guide";
@@ -1516,14 +1516,35 @@ function TrackingCodesTab() {
         </CardContent>
       </Card>
 
-      <Button
-        onClick={() => saveMutation.mutate(trackingData)}
-        disabled={saveMutation.isPending}
-        data-testid="button-save-tracking-codes"
-      >
-        {saveMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-        Save Tracking Codes
-      </Button>
+      <div className="flex items-center gap-3 flex-wrap">
+        <Button
+          onClick={() => saveMutation.mutate(trackingData)}
+          disabled={saveMutation.isPending}
+          data-testid="button-save-tracking-codes"
+        >
+          {saveMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+          Save Tracking Codes
+        </Button>
+      </div>
+
+      {settings && (settings.googleTagManagerId || settings.googleAnalyticsId || settings.facebookPixelId) && (
+        <Card className="border-green-500/20 bg-green-500/5">
+          <CardContent className="pt-4">
+            <div className="flex items-start gap-2">
+              <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-green-600 dark:text-green-400">Tracking Codes Active</p>
+                <p className="text-xs text-muted-foreground">
+                  Your tracking codes are saved and will be injected into every page of your site, both in the HTML source and via client-side loading. Verification tools like Google Tag Assistant should detect them automatically.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  If a third-party service shows "not verified", ensure you have published your site and the correct codes are saved above.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
