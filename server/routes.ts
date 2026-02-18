@@ -12,6 +12,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import nodemailer from "nodemailer";
+import { invalidateTrackingCache } from "./tracking-inject";
 
 const upload = multer({
   dest: "uploads/",
@@ -357,7 +358,9 @@ export async function registerRoutes(
 
         const hasSnippetJs = html.includes("snippet.js");
         const hasProjectId = html.includes(projectId);
-        const hasDataProjectId = html.includes(`data-projectId`) || html.includes(`data-project-id`) || html.includes(`dataset.projectId`);
+        const hasDataProjectId = html.includes(`data-projectId`) || html.includes(`data-project-id`) || html.includes(`dataset.projectId`) || html.includes(`dataset.projectid`);
+
+        const hasEventEndpoint = html.includes("/api/events");
 
         const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
         let foundOtherProjectId: string | null = null;
@@ -372,7 +375,7 @@ export async function registerRoutes(
           }
         }
 
-        const verified = hasSnippetJs && hasProjectId;
+        const verified = (hasSnippetJs && hasProjectId) || (hasProjectId && hasEventEndpoint);
 
         if (verified) {
           await storage.updateProject(projectId, {
@@ -389,7 +392,7 @@ export async function registerRoutes(
         } else if (hasSnippetJs) {
           message = "Found snippet.js but could not find your project ID. Make sure you're using the correct tracking code.";
         } else {
-          message = "Tracking code not found on the page. Make sure you've added the snippet to your website's <head> tag.";
+          message = "Tracking code not found on the page. Make sure you've added the snippet to your website's <head> tag. Note: If this is a single-page application (SPA), the tracking code may be loaded dynamically and won't be visible in the initial HTML. The tracking will still work when visitors load the page in their browser.";
         }
 
         res.json({
@@ -831,6 +834,7 @@ export async function registerRoutes(
   app.put("/api/admin/site-settings", requireAdmin, async (req, res) => {
     try {
       const settings = await storage.upsertSiteSettings(req.body);
+      invalidateTrackingCache();
       res.json(settings);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
