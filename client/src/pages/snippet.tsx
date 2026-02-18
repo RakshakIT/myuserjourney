@@ -88,6 +88,10 @@ export default function Snippet() {
                   </li>
                   <li>The snippet loads asynchronously and won't affect page speed</li>
                   <li>Events will appear in the Live Events tab within seconds</li>
+                  <li>
+                    The snippet URL ({baseUrl}) must be accessible from your website.
+                    If you publish your analytics platform to a custom domain, update the URL accordingly.
+                  </li>
                 </ol>
               </div>
             </div>
