@@ -93,6 +93,7 @@ function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
           <Link href="/help-center" className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-help-center">Help Center</Link>
           <Link href="/capabilities" className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-capabilities">Capabilities</Link>
           <Link href="/guides" className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-guides">Guides</Link>
+          <Link href="/books" className="block py-2 text-sm" onClick={onClose} data-testid="mobile-link-books">Books</Link>
         </div>
         <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Security</p>
@@ -172,6 +173,7 @@ export function PublicNavbar() {
                         <ul className="space-y-0">
                           <ListItem href="/capabilities" title="Capabilities" />
                           <ListItem href="/guides" title="Guides" />
+                          <ListItem href="/books" title="Books" description="Free guides and ebooks" icon={GraduationCap} />
                         </ul>
                       </div>
                     </div>
@@ -277,6 +279,7 @@ export function PublicFooter() {
               <li><Link href="/docs" className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-docs">Docs</Link></li>
               <li><Link href="/blog" className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-blog">Blog</Link></li>
               <li><Link href="/guides" className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-guides">Guides</Link></li>
+              <li><Link href="/books" className="text-sm text-muted-foreground hover:text-foreground" data-testid="footer-books">Books</Link></li>
             </ul>
           </div>
           <div>
