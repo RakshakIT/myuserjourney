@@ -23,7 +23,7 @@ export default function PrivacyPolicyPage() {
         <div className="space-y-4">
           <h2 className="text-xl font-bold">1. Introduction</h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            My User Journey ("we", "our", "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our analytics platform. As a self-hosted solution, your analytics data is processed entirely within your own infrastructure.
+            My User Journey ("we", "our", "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our analytics platform. As a self-hosted solution, your core analytics data is stored in your own database. Optional integrations (such as geolocation lookups, AI features, or payment processing) may involve limited data exchange with third-party services, all under your control and configuration.
           </p>
         </div>
 
@@ -73,7 +73,7 @@ export default function PrivacyPolicyPage() {
         <div className="space-y-4">
           <h2 className="text-xl font-bold">6. Data Sharing</h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            We do not sell, trade, or rent your personal information to third parties. We do not share your analytics data with anyone. As a self-hosted solution, your analytics data never leaves your infrastructure. We may use third-party services for authentication (as selected by you) and optional AI features (with your explicit configuration).
+            We do not sell, trade, or rent your personal information to third parties. We do not share your analytics data with anyone outside of your configured integrations. As a self-hosted solution, your core analytics data is stored in your own database and is not accessible to the platform developer. Optional services — including geolocation lookups (ip-api.com), AI-powered features (OpenAI), payment processing (Stripe), and authentication providers (Google OAuth) — may involve limited data exchange with third-party services. These integrations are configurable and can be enabled or disabled at your discretion.
           </p>
         </div>
 
