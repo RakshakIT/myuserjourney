@@ -21,6 +21,7 @@ import {
   ChevronRight,
   MapPin,
   User,
+  Search,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
@@ -52,6 +53,13 @@ interface Journey {
   eventCount: number;
   events: JourneyEvent[];
   referrer: string;
+  searchKeyword: string | null;
+}
+
+function isSearchEngine(referrer: string): boolean {
+  const ref = referrer.toLowerCase();
+  const engines = ["google.", "bing.", "yahoo.", "duckduckgo.", "baidu.", "yandex.", "ecosia.", "ask.", "qwant.", "brave."];
+  return engines.some(e => ref.includes(e));
 }
 
 const eventIcons: Record<string, any> = {
@@ -119,6 +127,12 @@ function JourneyCard({ journey }: { journey: Journey }) {
                 {journey.pageCount} pages
               </span>
               <span>{journey.eventCount} events</span>
+              {journey.searchKeyword && (
+                <span className="flex items-center gap-1 text-primary font-medium" data-testid={`text-keyword-preview-${journey.sessionId}`}>
+                  <Search className="h-3 w-3" />
+                  "{journey.searchKeyword}"
+                </span>
+              )}
             </div>
           </div>
 
@@ -129,8 +143,24 @@ function JourneyCard({ journey }: { journey: Journey }) {
 
         {expanded && (
           <div className="mt-4 ml-12 border-l-2 border-muted pl-4 space-y-3">
-            <div className="text-xs text-muted-foreground mb-2">
-              Referrer: {journey.referrer || "Direct"}
+            <div className="text-xs text-muted-foreground mb-2 space-y-1.5">
+              <div>Referrer: {journey.referrer || "Direct"}</div>
+              {journey.searchKeyword && (
+                <div className="flex items-center gap-2" data-testid={`search-keyword-${journey.sessionId}`}>
+                  <Badge variant="secondary" className="gap-1 text-xs font-normal">
+                    <Search className="h-3 w-3" />
+                    Search keyword: <span className="font-semibold">{journey.searchKeyword}</span>
+                  </Badge>
+                </div>
+              )}
+              {journey.referrer && !journey.searchKeyword && isSearchEngine(journey.referrer) && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="gap-1 text-xs font-normal text-muted-foreground">
+                    <Search className="h-3 w-3" />
+                    Keyword not available (encrypted by search engine)
+                  </Badge>
+                </div>
+              )}
             </div>
             {journey.events.map((evt, i) => {
               const Icon = eventIcons[evt.eventType] || Eye;
