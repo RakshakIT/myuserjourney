@@ -1717,7 +1717,7 @@ export default function PrivacyPage() {
                   { label: "Consent records audit trail (Art. 7(1))", ok: true },
                   { label: "Server-side consent enforcement", ok: consentMode === "opt-in" },
                   { label: "No personal data sold to third parties", ok: true },
-                  { label: "Self-hosted (all data stays on your server)", ok: true },
+                  { label: "Self-hosted (core analytics data stays in your database)", ok: true },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center gap-2.5">
                     {item.ok ? (
