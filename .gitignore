@@ -54,7 +54,11 @@ coverage/
 tmp/
 temp/
 
-# Replit-specific (not needed for GitHub)
+# Admin panel (private)
+server/admin-routes.ts
+client/src/pages/admin.tsx
+
+# Platform-specific (not needed for GitHub)
 .replit
 replit.nix
 .local/

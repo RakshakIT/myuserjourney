@@ -101,7 +101,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <SEOHead title={seoData.login.title} description={seoData.login.description} keywords={seoData.login.keywords} canonicalUrl="https://myuserjourney.co.uk/login" />
       <header className="flex items-center justify-between gap-4 px-6 py-3 border-b">
-        <Link href="/landing">
+        <Link href="/">
           <Button variant="ghost" size="sm" data-testid="button-back-home">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back

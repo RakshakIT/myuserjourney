@@ -113,6 +113,12 @@ import {
   type InsertCaseStudy,
   type HelpArticle,
   type InsertHelpArticle,
+  gscKeywords,
+  gscStrategyReports,
+  type GscKeyword,
+  type InsertGscKeyword,
+  type GscStrategyReport,
+  type InsertGscStrategyReport,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -293,6 +299,14 @@ export interface IStorage {
   createHelpArticle(article: InsertHelpArticle): Promise<HelpArticle>;
   updateHelpArticle(id: string, data: Partial<InsertHelpArticle>): Promise<HelpArticle>;
   deleteHelpArticle(id: string): Promise<void>;
+
+  getGscKeywords(projectId: string): Promise<GscKeyword[]>;
+  createGscKeywords(keywords: InsertGscKeyword[]): Promise<GscKeyword[]>;
+  deleteGscKeywordsByProject(projectId: string): Promise<void>;
+  deleteGscKeywordsByBatch(batchId: string): Promise<void>;
+  getGscStrategyReports(projectId: string): Promise<GscStrategyReport[]>;
+  createGscStrategyReport(report: InsertGscStrategyReport): Promise<GscStrategyReport>;
+  deleteGscStrategyReport(id: string): Promise<void>;
 }
 
 export interface EventFilters {
@@ -1243,6 +1257,37 @@ export class DatabaseStorage implements IStorage {
   }
   async deleteHelpArticle(id: string): Promise<void> {
     await db.delete(helpArticles).where(eq(helpArticles.id, id));
+  }
+
+  async getGscKeywords(projectId: string): Promise<GscKeyword[]> {
+    return db.select().from(gscKeywords).where(eq(gscKeywords.projectId, projectId)).orderBy(desc(gscKeywords.clicks));
+  }
+  async createGscKeywords(keywords: InsertGscKeyword[]): Promise<GscKeyword[]> {
+    if (keywords.length === 0) return [];
+    const batchSize = 100;
+    const results: GscKeyword[] = [];
+    for (let i = 0; i < keywords.length; i += batchSize) {
+      const batch = keywords.slice(i, i + batchSize);
+      const inserted = await db.insert(gscKeywords).values(batch).returning();
+      results.push(...inserted);
+    }
+    return results;
+  }
+  async deleteGscKeywordsByProject(projectId: string): Promise<void> {
+    await db.delete(gscKeywords).where(eq(gscKeywords.projectId, projectId));
+  }
+  async deleteGscKeywordsByBatch(batchId: string): Promise<void> {
+    await db.delete(gscKeywords).where(eq(gscKeywords.uploadBatchId, batchId));
+  }
+  async getGscStrategyReports(projectId: string): Promise<GscStrategyReport[]> {
+    return db.select().from(gscStrategyReports).where(eq(gscStrategyReports.projectId, projectId)).orderBy(desc(gscStrategyReports.createdAt));
+  }
+  async createGscStrategyReport(report: InsertGscStrategyReport): Promise<GscStrategyReport> {
+    const [created] = await db.insert(gscStrategyReports).values(report).returning();
+    return created;
+  }
+  async deleteGscStrategyReport(id: string): Promise<void> {
+    await db.delete(gscStrategyReports).where(eq(gscStrategyReports.id, id));
   }
 }
 

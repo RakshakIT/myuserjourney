@@ -853,3 +853,37 @@ export const helpArticles = pgTable("help_articles", {
 export const insertHelpArticleSchema = createInsertSchema(helpArticles).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertHelpArticle = z.infer<typeof insertHelpArticleSchema>;
 export type HelpArticle = typeof helpArticles.$inferSelect;
+
+export const gscKeywords = pgTable("gsc_keywords", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull(),
+  query: text("query").notNull(),
+  page: text("page"),
+  clicks: integer("clicks").notNull().default(0),
+  impressions: integer("impressions").notNull().default(0),
+  ctr: real("ctr").notNull().default(0),
+  position: real("position").notNull().default(0),
+  source: text("source").notNull().default("csv"),
+  uploadBatchId: varchar("upload_batch_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertGscKeywordSchema = createInsertSchema(gscKeywords).omit({ id: true, createdAt: true });
+export type InsertGscKeyword = z.infer<typeof insertGscKeywordSchema>;
+export type GscKeyword = typeof gscKeywords.$inferSelect;
+
+export const gscStrategyReports = pgTable("gsc_strategy_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull(),
+  summary: text("summary"),
+  quickWins: jsonb("quick_wins"),
+  contentGaps: jsonb("content_gaps"),
+  lowCtrFixes: jsonb("low_ctr_fixes"),
+  recommendations: jsonb("recommendations"),
+  keywordCount: integer("keyword_count").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertGscStrategyReportSchema = createInsertSchema(gscStrategyReports).omit({ id: true, createdAt: true });
+export type InsertGscStrategyReport = z.infer<typeof insertGscStrategyReportSchema>;
+export type GscStrategyReport = typeof gscStrategyReports.$inferSelect;

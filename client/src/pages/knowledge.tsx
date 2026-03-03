@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest, getQueryFn } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -87,9 +87,17 @@ export default function KnowledgeCenterPage() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
 
   const { data: topics = [] } = useQuery<QuizTopic[]>({ queryKey: ["/api/quiz/topics"] });
-  const { data: attempts = [] } = useQuery<any[]>({ queryKey: ["/api/quiz/attempts"] });
+  const { data: rawAttempts } = useQuery<any[] | null>({
+    queryKey: ["/api/quiz/attempts"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+  });
+  const attempts = rawAttempts || [];
   const { data: allBadges = [] } = useQuery<BadgeType[]>({ queryKey: ["/api/badges"] });
-  const { data: myBadges = [] } = useQuery<any[]>({ queryKey: ["/api/badges/mine"] });
+  const { data: rawMyBadges } = useQuery<any[] | null>({
+    queryKey: ["/api/badges/mine"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+  });
+  const myBadges = rawMyBadges || [];
 
   const submitMutation = useMutation({
     mutationFn: async (data: { topicId: string; answers: (number | undefined)[] }) => {

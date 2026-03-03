@@ -73,7 +73,7 @@ function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 bg-background md:hidden">
       <div className="flex items-center justify-between px-6 py-3 border-b">
-        <Link href="/landing" className="flex items-center gap-2" onClick={onClose}>
+        <Link href="/" className="flex items-center gap-2" onClick={onClose}>
           <AnimatedLogo size="sm" showText={true} />
         </Link>
         <Button variant="ghost" size="icon" onClick={onClose} data-testid="button-mobile-nav-close">
@@ -121,9 +121,10 @@ export function PublicNavbar() {
 
   return (
     <>
+      <TrackingScripts />
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 px-6 py-2">
-          <Link href="/landing" className="flex items-center shrink-0" data-testid="link-logo">
+          <Link href="/" className="flex items-center shrink-0" data-testid="link-logo">
             <AnimatedLogo size="md" showText={true} />
           </Link>
 
@@ -423,6 +424,8 @@ function TrackingScripts() {
     bodyScripts.push(settings.customTrackingBody);
   }
 
+  const settingsKey = settings ? JSON.stringify(settings) : "";
+
   useEffect(() => {
     const cleanup = () => {
       document.querySelectorAll("[data-muj-tracking]").forEach(el => el.remove());
@@ -432,22 +435,43 @@ function TrackingScripts() {
 
     if (headScripts.length === 0 && bodyScripts.length === 0) return cleanup;
 
+    const alreadyHasGtm = settings?.googleTagManagerId &&
+      document.querySelector(`script[src*="googletagmanager.com/gtm.js?id=${settings.googleTagManagerId}"]`);
+    const alreadyHasGa = settings?.googleAnalyticsId &&
+      document.querySelector(`script[src*="googletagmanager.com/gtag/js?id=${settings.googleAnalyticsId}"]`);
+
     const headContainer = document.createElement("div");
     headContainer.innerHTML = headScripts.join("");
 
     headContainer.querySelectorAll("meta").forEach(m => {
+      const name = m.getAttribute("name");
+      const content = m.getAttribute("content");
+      if (name && content && document.querySelector(`meta[name="${name}"][content="${content}"]`)) {
+        return;
+      }
       const clone = m.cloneNode(true) as HTMLMetaElement;
       clone.setAttribute("data-muj-tracking", "head");
       document.head.appendChild(clone);
     });
 
     headContainer.querySelectorAll("script").forEach(oldScript => {
+      if (oldScript.src) {
+        if (alreadyHasGtm && oldScript.src.includes("gtm.js")) return;
+        if (alreadyHasGa && oldScript.src.includes("gtag/js")) return;
+        if (document.querySelector(`script[src="${oldScript.src}"]`)) return;
+      }
+
       const newScript = document.createElement("script");
       newScript.setAttribute("data-muj-tracking", "head");
       if (oldScript.src) {
         newScript.src = oldScript.src;
         newScript.async = true;
       } else {
+        if (oldScript.textContent) {
+          const alreadyExists = Array.from(document.querySelectorAll("head script:not([data-muj-tracking])"))
+            .some(s => s.textContent && s.textContent.includes(oldScript.textContent!.slice(0, 50)));
+          if (alreadyExists) return;
+        }
         newScript.textContent = oldScript.textContent;
       }
       document.head.appendChild(newScript);
@@ -461,7 +485,7 @@ function TrackingScripts() {
     }
 
     return cleanup;
-  }, [settings]);
+  }, [settingsKey]);
 
   return null;
 }

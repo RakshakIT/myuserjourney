@@ -24,7 +24,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <SEOHead title={seoData.landing.title} description={seoData.landing.description} keywords={seoData.landing.keywords} canonicalUrl="https://myuserjourney.co.uk/landing" jsonLd={seoData.landing.jsonLd} />
+      <SEOHead title={seoData.landing.title} description={seoData.landing.description} keywords={seoData.landing.keywords} canonicalUrl="https://myuserjourney.co.uk/" jsonLd={seoData.landing.jsonLd} />
       <PublicNavbar />
 
       <section className="relative overflow-hidden">

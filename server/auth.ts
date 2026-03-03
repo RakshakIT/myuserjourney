@@ -293,7 +293,7 @@ export async function setupAuth(app: Express) {
   app.get("/api/logout", (req: Request, res: Response) => {
     req.logout(() => {
       req.session.destroy(() => {
-        res.redirect("/landing");
+        res.redirect("/");
       });
     });
   });
@@ -359,9 +359,15 @@ export async function setupAuth(app: Express) {
             auth: { user: smtpConfig.username, pass: smtpConfig.password },
           });
 
+          const rFromEmail = (smtpConfig.fromEmail || smtpConfig.username || "").trim();
+          const rFromName = (smtpConfig.fromName || "").trim();
           await transporter.sendMail({
-            from: `"${smtpConfig.fromName}" <${smtpConfig.fromEmail}>`,
-            to: email,
+            from: rFromName ? `"${rFromName}" <${rFromEmail}>` : rFromEmail,
+            to: email.trim(),
+            envelope: {
+              from: rFromEmail,
+              to: email.trim(),
+            },
             subject: `Password Reset - ${siteName}`,
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

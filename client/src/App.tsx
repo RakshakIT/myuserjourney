@@ -48,6 +48,7 @@ import AdminPage from "@/pages/admin";
 import IntegrationsPage from "@/pages/integrations";
 import ContentGapPage from "@/pages/content-gap";
 import SiteResearchPage from "@/pages/site-research";
+import LeadJourneyPage from "@/pages/lead-journey";
 import PredictiveAnalyticsPage from "@/pages/predictive-analytics";
 import UxAuditorPage from "@/pages/ux-auditor";
 import MarketingCopilotPage from "@/pages/marketing-copilot";
@@ -83,7 +84,8 @@ import HelpArticlePage from "@/pages/public/help-article";
 function AppRouter() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
+      <Route path="/dashboard" component={Dashboard} />
+      <Route path="/">{() => <Redirect to="/dashboard" />}</Route>
       <Route path="/realtime" component={RealtimePage} />
       <Route path="/acquisition" component={AcquisitionPage} />
       <Route path="/user-acquisition" component={UserAcquisitionPage} />
@@ -96,6 +98,7 @@ function AppRouter() {
       <Route path="/monetisation" component={MonetisationPage} />
       <Route path="/ecommerce" component={EcommercePage} />
       <Route path="/purchase-journey" component={PurchaseJourneyPage} />
+      <Route path="/lead-journey" component={LeadJourneyPage} />
       <Route path="/transactions" component={TransactionsPage} />
       <Route path="/traffic-sources" component={TrafficSourcesPage} />
       <Route path="/geography" component={GeographyPage} />
@@ -144,7 +147,7 @@ function ProtectedLayout() {
   }
 
   if (!user) {
-    return <Redirect to="/landing" />;
+    return <Redirect to="/" />;
   }
 
   const style = {
@@ -188,14 +191,15 @@ function PublicRoutes() {
     );
   }
 
-  const authOnlyRoutes = ["/landing", "/login"];
-  if (user && authOnlyRoutes.some(r => location === r || location.startsWith(r + "/"))) {
-    return <Redirect to="/" />;
+  const authOnlyRoutes = ["/login"];
+  if (user && (location === "/" || authOnlyRoutes.some(r => location === r || location.startsWith(r + "/")))) {
+    return <Redirect to="/dashboard" />;
   }
 
   return (
     <Switch>
-      <Route path="/landing" component={LandingPage} />
+      <Route path="/" component={LandingPage} />
+      <Route path="/landing">{() => <Redirect to="/" />}</Route>
       <Route path="/login" component={LoginPage} />
       <Route path="/use-cases" component={UseCasesPage} />
       <Route path="/pricing" component={PricingPublicPage} />
@@ -222,7 +226,7 @@ function PublicRoutes() {
       <Route path="/contact" component={ContactPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/page/:slug" component={CmsPage} />
-      <Route><Redirect to="/landing" /></Route>
+      <Route component={NotFound} />
     </Switch>
   );
 }
@@ -235,7 +239,7 @@ function RootRouter() {
     "/case-studies", "/security", "/trust-center", "/terms", "/privacy-policy",
     "/contact", "/reset-password", "/page",
   ];
-  const isPublicRoute = publicRoutes.some(p => location === p || location.startsWith(p + "/"));
+  const isPublicRoute = location === "/" || publicRoutes.some(p => location === p || location.startsWith(p + "/"));
 
   if (isPublicRoute) {
     return <PublicRoutes />;

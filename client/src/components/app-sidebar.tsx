@@ -39,6 +39,7 @@ import {
   Wand2,
   GraduationCap,
   Award,
+  Plus,
 } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import {
@@ -69,6 +70,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { ProjectWizard } from "@/pages/projects";
+import { useState, useEffect } from "react";
 
 interface NavItem {
   title: string;
@@ -83,7 +93,7 @@ interface NavSection {
 }
 
 const topLevelItems: NavItem[] = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Realtime", url: "/realtime", icon: Zap },
 ];
 
@@ -114,6 +124,7 @@ const monetisationSection: NavSection = {
   icon: CreditCard,
   items: [
     { title: "Overview", url: "/monetisation", icon: ShoppingCart },
+    { title: "Lead journey", url: "/lead-journey", icon: TrendingUp },
     { title: "E-commerce purchases", url: "/ecommerce", icon: Receipt },
     { title: "Purchase journey", url: "/purchase-journey", icon: Route },
     { title: "Transactions", url: "/transactions", icon: CreditCard },
@@ -222,10 +233,18 @@ export function AppSidebar() {
   const [location, setLocation] = useLocation();
   const { currentProject, setCurrentProject } = useProject();
   const { user, logout } = useAuth();
+  const [showNewProject, setShowNewProject] = useState(false);
+  const [showNoProjectsPrompt, setShowNoProjectsPrompt] = useState(false);
 
   const { data: projects } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
   });
+
+  useEffect(() => {
+    if (projects && projects.length === 0) {
+      setShowNoProjectsPrompt(true);
+    }
+  }, [projects]);
 
   return (
     <Sidebar>
@@ -234,12 +253,12 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {projects && projects.length > 0 && (
-          <div className="px-3 pb-2">
+        <div className="px-3 pb-2">
+          <div className="flex items-center gap-1.5">
             <Select
               value={currentProject?.id || ""}
               onValueChange={(val) => {
-                const p = projects.find((pr) => pr.id === val);
+                const p = projects?.find((pr) => pr.id === val);
                 if (p) setCurrentProject(p);
               }}
             >
@@ -247,15 +266,56 @@ export function AppSidebar() {
                 <SelectValue placeholder="Select project" />
               </SelectTrigger>
               <SelectContent>
-                {projects.map((p) => (
+                {projects?.map((p) => (
                   <SelectItem key={p.id} value={p.id} data-testid={`select-project-${p.id}`}>
                     {p.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              size="icon"
+              className="shrink-0 h-9 w-9"
+              onClick={() => setShowNewProject(true)}
+              data-testid="button-add-project"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
           </div>
-        )}
+        </div>
+
+        <Dialog open={showNewProject} onOpenChange={setShowNewProject}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Add New Project</DialogTitle>
+              <DialogDescription>Set up a new project to start tracking analytics.</DialogDescription>
+            </DialogHeader>
+            <ProjectWizard
+              onComplete={(project) => {
+                setCurrentProject(project);
+                setShowNewProject(false);
+              }}
+              onClose={() => setShowNewProject(false)}
+            />
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showNoProjectsPrompt} onOpenChange={setShowNoProjectsPrompt}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Welcome! Create Your First Project</DialogTitle>
+              <DialogDescription>You don't have any projects yet. Create one to start tracking your website analytics.</DialogDescription>
+            </DialogHeader>
+            <ProjectWizard
+              onComplete={(project) => {
+                setCurrentProject(project);
+                setShowNoProjectsPrompt(false);
+              }}
+              onClose={() => setShowNoProjectsPrompt(false)}
+            />
+          </DialogContent>
+        </Dialog>
 
         <SidebarGroup>
           <SidebarGroupLabel>Life cycle</SidebarGroupLabel>

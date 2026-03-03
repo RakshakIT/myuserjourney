@@ -50,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - User management with role and status controls
 
 ### Changed
-- Replaced Replit Auth with custom authentication system
+- Replaced third-party auth with custom authentication system
 - Login page supports both email/password and Google OAuth
 
 ## [1.0.0] - 2026-02-14

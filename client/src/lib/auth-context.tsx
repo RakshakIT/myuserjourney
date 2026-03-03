@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {}
     queryClient.setQueryData(["/api/auth/me"], null);
     queryClient.clear();
-    window.location.href = "/landing";
+    window.location.href = "/";
   };
 
   return (

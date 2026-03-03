@@ -13,6 +13,7 @@ import path from "path";
 import fs from "fs";
 import nodemailer from "nodemailer";
 import { invalidateTrackingCache } from "./tracking-inject";
+import { registerAdminRoutes } from "./admin-routes";
 
 const upload = multer({
   dest: "uploads/",
@@ -261,10 +262,13 @@ export async function registerRoutes(
       if (!req.body.domain || !req.body.domain.trim()) {
         return res.status(400).json({ message: "Project domain is required" });
       }
+      let cleanDomain = req.body.domain.trim()
+        .replace(/^https?:\/\//i, "")
+        .replace(/\/+$/, "");
       const parsed = insertProjectSchema.safeParse({
         ...req.body,
         name: req.body.name.trim(),
-        domain: req.body.domain.trim(),
+        domain: cleanDomain,
         userId: user.id,
         status: req.body.status || "active",
       });
@@ -297,6 +301,11 @@ export async function registerRoutes(
           updateData[field] = req.body[field];
         }
       }
+      if (updateData.domain) {
+        updateData.domain = updateData.domain.trim()
+          .replace(/^https?:\/\//i, "")
+          .replace(/\/+$/, "");
+      }
       const updated = await storage.updateProject(req.params.id, updateData);
       res.json(updated);
     } catch (err: any) {
@@ -313,7 +322,8 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Access denied" });
       }
 
-      let url = (req.body.url || `https://${project.domain}`).trim();
+      let domain = project.domain.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
+      let url = (req.body.url || `https://${domain}`).trim();
       if (!url.startsWith("http://") && !url.startsWith("https://")) {
         url = "https://" + url;
       }
@@ -705,418 +715,22 @@ export async function registerRoutes(
     }
   });
 
-  // Admin routes
-  app.get("/api/admin/users", requireAdmin, async (_req, res) => {
-    try {
-      const users = await storage.getAllUsers();
-      const safeUsers = users.map(({ password, ...u }) => u);
-      res.json(safeUsers);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
+  registerAdminRoutes(app);
+
+  app.get("/landing", (_req, res) => {
+    res.redirect(301, "/");
   });
 
-  app.post("/api/admin/users", requireAdmin, async (req, res) => {
-    try {
-      const { email, password, username, role } = req.body;
-      if (!email || !password) {
-        return res.status(400).json({ message: "Email and password are required" });
-      }
-      if (password.length < 6) {
-        return res.status(400).json({ message: "Password must be at least 6 characters" });
-      }
-      const existing = await storage.getUserByEmail(email);
-      if (existing) {
-        return res.status(400).json({ message: "A user with this email already exists" });
-      }
-      const bcrypt = await import("bcryptjs");
-      const hashedPassword = await bcrypt.hash(password, 12);
-      let finalUsername = username || email.split("@")[0];
-      let uniqueUsername = finalUsername;
-      let counter = 1;
-      while (await storage.getUserByUsername(uniqueUsername)) {
-        uniqueUsername = `${finalUsername}${counter}`;
-        counter++;
-      }
-      const user = await storage.createUser({
-        username: uniqueUsername,
-        email,
-        password: hashedPassword,
-      });
-      if (role && role !== "user") {
-        await storage.updateUser(user.id, { role });
-      }
-      const { password: _, ...safeUser } = user;
-      res.status(201).json(safeUser);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.patch("/api/admin/users/:id", requireAdmin, async (req, res) => {
-    try {
-      const { role, subscriptionTier, subscriptionStatus } = req.body;
-      const updated = await storage.updateUser(req.params.id, {
-        ...(role && { role }),
-        ...(subscriptionTier && { subscriptionTier }),
-        ...(subscriptionStatus && { subscriptionStatus }),
-      });
-      const { password, ...safeUser } = updated;
-      res.json(safeUser);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.get("/api/admin/plans", requireAdmin, async (_req, res) => {
-    try {
-      const plans = await storage.getSubscriptionPlans();
-      res.json(plans);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.post("/api/admin/plans", requireAdmin, async (req, res) => {
-    try {
-      const plan = await storage.createSubscriptionPlan(req.body);
-      res.status(201).json(plan);
-    } catch (err: any) {
-      res.status(400).json({ message: err.message });
-    }
-  });
-
-  app.patch("/api/admin/plans/:id", requireAdmin, async (req, res) => {
-    try {
-      const plan = await storage.updateSubscriptionPlan(req.params.id, req.body);
-      res.json(plan);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.delete("/api/admin/plans/:id", requireAdmin, async (req, res) => {
-    try {
-      await storage.deleteSubscriptionPlan(req.params.id);
-      res.json({ success: true });
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.get("/api/admin/payment-settings", requireAdmin, async (_req, res) => {
-    try {
-      const settings = await storage.getPaymentSettings();
-      res.json(settings || { provider: "stripe", isActive: false });
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.put("/api/admin/payment-settings", requireAdmin, async (req, res) => {
-    try {
-      const settings = await storage.upsertPaymentSettings(req.body);
-      res.json(settings);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.get("/api/admin/site-settings", requireAdmin, async (_req, res) => {
-    try {
-      const settings = await storage.getSiteSettings();
-      res.json(settings || {});
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.put("/api/admin/site-settings", requireAdmin, async (req, res) => {
-    try {
-      const settings = await storage.upsertSiteSettings(req.body);
-      invalidateTrackingCache();
-      res.json(settings);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.get("/api/admin/smtp-settings", requireAdmin, async (_req, res) => {
-    try {
-      const settings = await storage.getSmtpSettings();
-      res.json(settings || {});
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.put("/api/admin/smtp-settings", requireAdmin, async (req, res) => {
-    try {
-      const settings = await storage.upsertSmtpSettings(req.body);
-      res.json(settings);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.post("/api/admin/smtp-test", requireAdmin, async (req, res) => {
-    try {
-      const settings = await storage.getSmtpSettings();
-      if (!settings) {
-        return res.status(400).json({ message: "SMTP settings not configured" });
-      }
-      const transporter = nodemailer.createTransport({
-        host: settings.host,
-        port: settings.port,
-        secure: settings.encryption === "ssl",
-        auth: { user: settings.username, pass: settings.password },
-      });
-      await transporter.sendMail({
-        from: `"${settings.fromName}" <${settings.fromEmail}>`,
-        to: req.body.testEmail || settings.fromEmail,
-        subject: "SMTP Test - My User Journey",
-        text: "This is a test email from your analytics platform.",
-      });
-      res.json({ message: "Test email sent successfully" });
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.get("/api/admin/pages", requireAdmin, async (_req, res) => {
-    try {
-      const pages = await storage.getCmsPages();
-      res.json(pages);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.get("/api/admin/pages/:id", requireAdmin, async (req, res) => {
-    try {
-      const page = await storage.getCmsPage(String(req.params.id));
-      if (!page) return res.status(404).json({ message: "Page not found" });
-      res.json(page);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.post("/api/admin/pages", requireAdmin, async (req, res) => {
-    try {
-      const page = await storage.createCmsPage(req.body);
-      res.status(201).json(page);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.patch("/api/admin/pages/:id", requireAdmin, async (req, res) => {
-    try {
-      const page = await storage.updateCmsPage(String(req.params.id), req.body);
-      res.json(page);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.delete("/api/admin/pages/:id", requireAdmin, async (req, res) => {
-    try {
-      await storage.deleteCmsPage(String(req.params.id));
-      res.json({ message: "Page deleted" });
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  // Blog Posts Admin CRUD
-  app.get("/api/admin/blog-posts", requireAdmin, async (_req, res) => {
-    try {
-      const posts = await storage.getBlogPosts();
-      res.json(posts);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-  app.post("/api/admin/blog-posts", requireAdmin, async (req, res) => {
-    try {
-      const post = await storage.createBlogPost(req.body);
-      res.status(201).json(post);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-  app.patch("/api/admin/blog-posts/:id", requireAdmin, async (req, res) => {
-    try {
-      const post = await storage.updateBlogPost(String(req.params.id), req.body);
-      res.json(post);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-  app.delete("/api/admin/blog-posts/:id", requireAdmin, async (req, res) => {
-    try {
-      await storage.deleteBlogPost(String(req.params.id));
-      res.json({ message: "Blog post deleted" });
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  // Guides Admin CRUD
-  app.get("/api/admin/guides", requireAdmin, async (_req, res) => {
-    try {
-      const guides = await storage.getGuides();
-      res.json(guides);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-  app.post("/api/admin/guides", requireAdmin, async (req, res) => {
-    try {
-      const guide = await storage.createGuide(req.body);
-      res.status(201).json(guide);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-  app.patch("/api/admin/guides/:id", requireAdmin, async (req, res) => {
-    try {
-      const guide = await storage.updateGuide(String(req.params.id), req.body);
-      res.json(guide);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-  app.delete("/api/admin/guides/:id", requireAdmin, async (req, res) => {
-    try {
-      await storage.deleteGuide(String(req.params.id));
-      res.json({ message: "Guide deleted" });
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  // Case Studies Admin CRUD
-  app.get("/api/admin/case-studies", requireAdmin, async (_req, res) => {
-    try {
-      const studies = await storage.getCaseStudies();
-      res.json(studies);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-  app.post("/api/admin/case-studies", requireAdmin, async (req, res) => {
-    try {
-      const study = await storage.createCaseStudy(req.body);
-      res.status(201).json(study);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-  app.patch("/api/admin/case-studies/:id", requireAdmin, async (req, res) => {
-    try {
-      const study = await storage.updateCaseStudy(String(req.params.id), req.body);
-      res.json(study);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-  app.delete("/api/admin/case-studies/:id", requireAdmin, async (req, res) => {
-    try {
-      await storage.deleteCaseStudy(String(req.params.id));
-      res.json({ message: "Case study deleted" });
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.get("/api/admin/files", requireAdmin, async (_req, res) => {
-    try {
-      const files = await storage.getCmsFiles();
-      res.json(files);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.post("/api/admin/files", requireAdmin, upload.single("file"), async (req, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
-      }
-      const ext = path.extname(req.file.originalname);
-      const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2)}${ext}`;
-      const destPath = path.join("uploads", uniqueName);
-      fs.renameSync(req.file.path, destPath);
-      const fileRecord = await storage.createCmsFile({
-        filename: req.file.originalname,
-        originalName: req.file.originalname,
-        url: `/uploads/${uniqueName}`,
-        mimeType: req.file.mimetype,
-        size: req.file.size,
-      });
-      res.status(201).json(fileRecord);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.delete("/api/admin/files/:id", requireAdmin, async (req, res) => {
-    try {
-      const file = await storage.getCmsFile(String(req.params.id));
-      if (!file) return res.status(404).json({ message: "File not found" });
-      const filePath = path.join(".", file.url);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-      await storage.deleteCmsFile(String(req.params.id));
-      res.json({ message: "File deleted" });
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.get("/api/admin/contacts", requireAdmin, async (_req, res) => {
-    try {
-      const submissions = await storage.getContactSubmissions();
-      res.json(submissions);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.patch("/api/admin/contacts/:id", requireAdmin, async (req, res) => {
-    try {
-      const submission = await storage.updateContactSubmission(String(req.params.id), req.body);
-      res.json(submission);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.delete("/api/admin/contacts/:id", requireAdmin, async (req, res) => {
-    try {
-      await storage.deleteContactSubmission(String(req.params.id));
-      res.json({ message: "Submission deleted" });
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  app.delete("/api/admin/users/:id", requireAdmin, async (req, res) => {
-    try {
-      await storage.deleteUser(String(req.params.id));
-      res.json({ message: "User deleted" });
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
+  app.get("/robots.txt", (_req, res) => {
+    res.type("text/plain").send(
+      `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /admin\nDisallow: /dashboard\n\nSitemap: https://myuserjourney.co.uk/sitemap.xml\n`
+    );
   });
 
   app.get("/sitemap.xml", async (_req, res) => {
     const baseUrl = "https://myuserjourney.co.uk";
     const staticPages = [
-      { loc: "/landing", priority: "1.0", changefreq: "weekly" },
+      { loc: "/", priority: "1.0", changefreq: "weekly" },
       { loc: "/pricing", priority: "0.9", changefreq: "monthly" },
       { loc: "/docs", priority: "0.9", changefreq: "weekly" },
       { loc: "/use-cases", priority: "0.8", changefreq: "monthly" },
@@ -1161,7 +775,8 @@ export async function registerRoutes(
       }
     } catch {}
     xml += `</urlset>`;
-    res.header("Content-Type", "application/xml");
+    res.set("Content-Type", "application/xml; charset=utf-8");
+    res.set("Cache-Control", "public, max-age=3600");
     res.send(xml);
   });
 
@@ -1324,9 +939,16 @@ export async function registerRoutes(
             secure: smtpConfig.encryption === "ssl",
             auth: { user: smtpConfig.username, pass: smtpConfig.password },
           });
+          const cFromEmail = (smtpConfig.fromEmail || smtpConfig.username || "").trim();
+          const cFromName = (smtpConfig.fromName || "").trim();
+          const cToEmail = ((siteConfig && siteConfig.contactEmail) || cFromEmail).trim();
           await transporter.sendMail({
-            from: `"${smtpConfig.fromName}" <${smtpConfig.fromEmail}>`,
-            to: (siteConfig && siteConfig.contactEmail) || smtpConfig.fromEmail,
+            from: cFromName ? `"${cFromName}" <${cFromEmail}>` : cFromEmail,
+            to: cToEmail,
+            envelope: {
+              from: cFromEmail,
+              to: cToEmail,
+            },
             subject: `New Contact Form Submission from ${name}`,
             text: `Name: ${name}\nEmail: ${email}\nMessage: ${message}`,
           });
@@ -1418,11 +1040,6 @@ export async function registerRoutes(
       const pageDomain = (body.hostname || "").replace(/^www\./, "").toLowerCase();
 
       let isInternal = "false";
-      if (projectDomain && pageDomain) {
-        if (pageDomain !== projectDomain && !pageDomain.endsWith("." + projectDomain)) {
-          isInternal = "true";
-        }
-      }
       if (ip && (ip.startsWith("192.168.") || ip.startsWith("10.") || ip.startsWith("172.16.") || ip === "127.0.0.1" || ip === "::1")) {
         isInternal = "true";
       }
@@ -3383,14 +3000,324 @@ export async function registerRoutes(
 
   app.get("/api/projects/:id/search-console", async (req, res) => {
     try {
+      const keywords = await storage.getGscKeywords(req.params.id);
+      const hasData = keywords.length > 0;
+
+      const queries = keywords.map(k => ({
+        query: k.query,
+        page: k.page || "",
+        clicks: k.clicks,
+        impressions: k.impressions,
+        ctr: k.ctr,
+        position: k.position,
+      }));
+
+      const pageMap = new Map<string, { clicks: number; impressions: number; ctrSum: number; posSum: number; count: number }>();
+      keywords.forEach(k => {
+        const pg = k.page || "(not set)";
+        const existing = pageMap.get(pg) || { clicks: 0, impressions: 0, ctrSum: 0, posSum: 0, count: 0 };
+        existing.clicks += k.clicks;
+        existing.impressions += k.impressions;
+        existing.ctrSum += k.ctr;
+        existing.posSum += k.position;
+        existing.count += 1;
+        pageMap.set(pg, existing);
+      });
+      const pages = Array.from(pageMap.entries()).map(([page, d]) => ({
+        page,
+        clicks: d.clicks,
+        impressions: d.impressions,
+        ctr: d.count > 0 ? d.ctrSum / d.count : 0,
+        position: d.count > 0 ? d.posSum / d.count : 0,
+      })).sort((a, b) => b.clicks - a.clicks);
+
+      const totalClicks = keywords.reduce((s, k) => s + k.clicks, 0);
+      const totalImpressions = keywords.reduce((s, k) => s + k.impressions, 0);
+      const avgCtr = keywords.length > 0 ? keywords.reduce((s, k) => s + k.ctr, 0) / keywords.length : 0;
+      const avgPosition = keywords.length > 0 ? keywords.reduce((s, k) => s + k.position, 0) / keywords.length : 0;
+
       res.json({
-        connected: false,
-        queries: [],
-        pages: [],
+        connected: hasData,
+        queries,
+        pages,
         countries: [],
         devices: [],
         timeline: [],
-        totals: { clicks: 0, impressions: 0, ctr: 0, position: 0 },
+        totals: { clicks: totalClicks, impressions: totalImpressions, ctr: avgCtr, position: avgPosition },
+        keywordCount: keywords.length,
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/projects/:id/search-console/upload", upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      const fs = await import("fs");
+      const csvContent = fs.readFileSync(req.file.path, "utf-8");
+      fs.unlinkSync(req.file.path);
+
+      const lines = csvContent.split("\n").filter(l => l.trim());
+      if (lines.length < 2) {
+        return res.status(400).json({ message: "CSV file appears empty or has no data rows" });
+      }
+
+      const header = lines[0].toLowerCase();
+      const hasTab = header.includes("\t");
+      const delimiter = hasTab ? "\t" : ",";
+      const headers = header.split(delimiter).map(h => h.trim().replace(/"/g, ""));
+
+      const queryIdx = headers.findIndex(h => h === "query" || h === "top queries" || h === "search query" || h === "keyword");
+      const pageIdx = headers.findIndex(h => h === "page" || h === "url" || h === "landing page");
+      const clicksIdx = headers.findIndex(h => h === "clicks" || h === "click");
+      const impressionsIdx = headers.findIndex(h => h === "impressions" || h === "impression");
+      const ctrIdx = headers.findIndex(h => h === "ctr" || h === "click through rate" || h === "click-through rate");
+      const positionIdx = headers.findIndex(h => h === "position" || h === "average position" || h === "avg position" || h === "avg. position");
+
+      if (queryIdx === -1) {
+        return res.status(400).json({ message: "Could not find a 'Query' or 'Keyword' column in the CSV. Please upload a Google Search Console export file." });
+      }
+
+      const batchId = `batch_${Date.now()}`;
+      const keywords: any[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(delimiter).map(c => c.trim().replace(/"/g, ""));
+        const query = cols[queryIdx];
+        if (!query) continue;
+
+        const ctrVal = ctrIdx >= 0 ? parseFloat(cols[ctrIdx]?.replace("%", "") || "0") : 0;
+
+        keywords.push({
+          projectId: req.params.id,
+          query,
+          page: pageIdx >= 0 ? cols[pageIdx] || null : null,
+          clicks: clicksIdx >= 0 ? parseInt(cols[clicksIdx] || "0", 10) || 0 : 0,
+          impressions: impressionsIdx >= 0 ? parseInt(cols[impressionsIdx] || "0", 10) || 0 : 0,
+          ctr: isNaN(ctrVal) ? 0 : ctrVal,
+          position: positionIdx >= 0 ? parseFloat(cols[positionIdx] || "0") || 0 : 0,
+          source: "csv",
+          uploadBatchId: batchId,
+        });
+      }
+
+      if (keywords.length === 0) {
+        return res.status(400).json({ message: "No valid keyword rows found in the CSV" });
+      }
+
+      const created = await storage.createGscKeywords(keywords);
+      res.json({ message: `Successfully imported ${created.length} keywords`, count: created.length, batchId });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/projects/:id/search-console/keywords", async (req, res) => {
+    try {
+      await storage.deleteGscKeywordsByProject(req.params.id);
+      res.json({ message: "All keyword data cleared" });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/projects/:id/search-console/strategy", async (req, res) => {
+    try {
+      const keywords = await storage.getGscKeywords(req.params.id);
+      if (keywords.length === 0) {
+        return res.status(400).json({ message: "No keyword data available. Upload a CSV or connect Google Search Console first." });
+      }
+
+      const project = await storage.getProject(req.params.id);
+      const domain = project?.domain || "the website";
+
+      const topKeywords = keywords.slice(0, 200).map(k => ({
+        q: k.query,
+        p: k.page || "",
+        c: k.clicks,
+        i: k.impressions,
+        ctr: k.ctr,
+        pos: k.position,
+      }));
+
+      const quickWins = keywords.filter(k => k.position >= 4 && k.position <= 15);
+      const lowCtr = keywords.filter(k => k.position <= 10 && k.ctr < 3);
+      const contentGaps = keywords.filter(k => k.impressions > 50 && k.clicks === 0);
+
+      const systemPrompt = `You are an expert SEO strategist. Analyze the Google Search Console keyword data for "${domain}" and provide a comprehensive SEO strategy. Return valid JSON with this structure:
+{
+  "summary": "2-3 paragraph executive summary of the site's search performance",
+  "quickWins": [{"keyword": "string", "currentPosition": number, "action": "string", "expectedImpact": "high/medium/low", "page": "string"}],
+  "contentGaps": [{"topic": "string", "keywords": ["string"], "suggestedTitle": "string", "searchIntent": "informational/transactional/navigational", "priority": "high/medium/low"}],
+  "lowCtrFixes": [{"keyword": "string", "currentCtr": number, "position": number, "suggestedTitle": "string", "suggestedDescription": "string"}],
+  "recommendations": [{"category": "string", "title": "string", "description": "string", "priority": "high/medium/low", "effort": "low/medium/high"}]
+}
+Limit each array to maximum 10 items. Focus on actionable, specific recommendations.`;
+
+      const userPrompt = `Analyze these ${keywords.length} keywords for ${domain}:
+Top keywords by clicks: ${JSON.stringify(topKeywords.slice(0, 50))}
+Quick win opportunities (pos 4-15): ${quickWins.length} keywords
+Low CTR keywords (pos ≤10, CTR <3%): ${lowCtr.length} keywords
+Content gaps (impressions >50, 0 clicks): ${contentGaps.length} keywords
+Sample quick wins: ${JSON.stringify(quickWins.slice(0, 20).map(k => ({ q: k.query, pos: k.position, i: k.impressions, c: k.clicks })))}
+Sample low CTR: ${JSON.stringify(lowCtr.slice(0, 20).map(k => ({ q: k.query, ctr: k.ctr, pos: k.position })))}`;
+
+      const result = await aiChatJSON(systemPrompt, userPrompt);
+
+      const report = await storage.createGscStrategyReport({
+        projectId: req.params.id,
+        summary: result.summary || "",
+        quickWins: result.quickWins || [],
+        contentGaps: result.contentGaps || [],
+        lowCtrFixes: result.lowCtrFixes || [],
+        recommendations: result.recommendations || [],
+        keywordCount: keywords.length,
+      });
+
+      res.json(report);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/projects/:id/search-console/strategies", async (req, res) => {
+    try {
+      const reports = await storage.getGscStrategyReports(req.params.id);
+      res.json(reports);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/projects/:id/search-console/strategies/:reportId", async (req, res) => {
+    try {
+      await storage.deleteGscStrategyReport(req.params.reportId);
+      res.json({ message: "Strategy report deleted" });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/projects/:id/lead-journey", async (req, res) => {
+    try {
+      const { from, to } = parseDateRange(req.query);
+      const evts = await storage.getEventsByDateRange(req.params.id, from, to);
+
+      const discoveryTypes = new Set(["pageview", "session_start", "first_visit"]);
+      const engagementTypes = new Set(["scroll", "key_page_view", "cta_click", "content_interaction", "click"]);
+      const intentTypes = new Set(["form_start", "form_submit", "form_error", "phone_click", "email_click", "chat_start", "chat_lead"]);
+      const conversionTypes = new Set(["generate_lead"]);
+
+      const discovery = { events: 0, users: new Set<string>(), sessions: new Set<string>(), breakdown: {} as Record<string, { count: number; users: Set<string> }> };
+      const engagement = { events: 0, users: new Set<string>(), sessions: new Set<string>(), breakdown: {} as Record<string, { count: number; users: Set<string> }> };
+      const intent = { events: 0, users: new Set<string>(), sessions: new Set<string>(), breakdown: {} as Record<string, { count: number; users: Set<string> }> };
+      const conversion = { events: 0, users: new Set<string>(), sessions: new Set<string>(), breakdown: {} as Record<string, { count: number; users: Set<string> }> };
+
+      const discoveryParams: any[] = [];
+      const engagementParams: any[] = [];
+      const intentParams: any[] = [];
+      const conversionParams: any[] = [];
+
+      for (const e of evts) {
+        if (e.isBot === "true") continue;
+        const vid = e.visitorId || "anon";
+        const sid = e.sessionId || "unknown";
+        const et = e.eventType;
+        const meta = (e.metadata || {}) as Record<string, any>;
+
+        let stage: typeof discovery | null = null;
+        let paramsList: any[] | null = null;
+
+        if (discoveryTypes.has(et)) { stage = discovery; paramsList = discoveryParams; }
+        else if (conversionTypes.has(et)) { stage = conversion; paramsList = conversionParams; }
+        else if (intentTypes.has(et)) { stage = intent; paramsList = intentParams; }
+        else if (engagementTypes.has(et)) { stage = engagement; paramsList = engagementParams; }
+
+        if (!stage) continue;
+
+        stage.events++;
+        stage.users.add(vid);
+        stage.sessions.add(sid);
+        if (!stage.breakdown[et]) stage.breakdown[et] = { count: 0, users: new Set() };
+        stage.breakdown[et].count++;
+        stage.breakdown[et].users.add(vid);
+
+        if (et === "pageview") {
+          paramsList!.push({ type: "pageview", page: e.page, pageType: meta.pageType || "other" });
+        } else if (et === "session_start") {
+          paramsList!.push({ type: "session_start", landingPage: meta.landingPage || e.page, trafficSource: meta.trafficSource || e.trafficSource || "direct" });
+        } else if (et === "first_visit") {
+          paramsList!.push({ type: "first_visit", pageType: meta.pageType || "other" });
+        } else if (et === "scroll") {
+          paramsList!.push({ type: "scroll", depth: meta.depth || meta.percentageScrolled || 0, pageType: meta.pageType || "other" });
+        } else if (et === "key_page_view") {
+          paramsList!.push({ type: "key_page_view", pageType: meta.pageType || "other", serviceName: meta.serviceName || "" });
+        } else if (et === "cta_click") {
+          paramsList!.push({ type: "cta_click", ctaText: meta.ctaText || meta.text || "", ctaPosition: meta.ctaPosition || "unknown", pageType: meta.pageType || "other", serviceName: meta.serviceName || "" });
+        } else if (et === "content_interaction") {
+          paramsList!.push({ type: "content_interaction", contentType: meta.contentType || "", contentName: meta.contentName || "" });
+        } else if (et === "form_start") {
+          paramsList!.push({ type: "form_start", formName: meta.formName || "", formLocation: meta.formLocation || "", serviceInterest: meta.serviceInterest || "", pageType: meta.pageType || "other" });
+        } else if (et === "form_submit") {
+          paramsList!.push({ type: "form_submit", formName: meta.formName || meta.formId || "", pageType: meta.pageType || "other", serviceName: meta.serviceName || "" });
+        } else if (et === "form_error") {
+          paramsList!.push({ type: "form_error", formName: meta.formName || "", errorField: meta.errorField || "" });
+        } else if (et === "phone_click") {
+          paramsList!.push({ type: "phone_click", pageType: meta.pageType || "other", serviceName: meta.serviceName || "", trafficSource: meta.trafficSource || e.trafficSource || "direct", callDuration: meta.callDuration || 0 });
+        } else if (et === "email_click") {
+          paramsList!.push({ type: "email_click", pageType: meta.pageType || "other", serviceName: meta.serviceName || "" });
+        } else if (et === "chat_start") {
+          paramsList!.push({ type: "chat_start", pageType: meta.pageType || "other" });
+        } else if (et === "chat_lead") {
+          paramsList!.push({ type: "chat_lead", pageType: meta.pageType || "other" });
+        } else if (et === "generate_lead") {
+          paramsList!.push({ type: "generate_lead", leadType: meta.leadType || "form", serviceInterest: meta.serviceInterest || "", leadSource: meta.leadSource || e.trafficSource || "direct", landingPage: meta.landingPage || "" });
+        }
+      }
+
+      const serializeStage = (s: typeof discovery) => ({
+        events: s.events,
+        users: s.users.size,
+        sessions: s.sessions.size,
+        breakdown: Object.entries(s.breakdown).map(([type, d]) => ({ type, count: d.count, users: d.users.size })).sort((a, b) => b.count - a.count),
+      });
+
+      const aggregateParams = (params: any[], fields: string[], limit = 20) => {
+        const result: Record<string, Record<string, { count: number }>> = {};
+        for (const field of fields) {
+          const map = new Map<string, number>();
+          for (const p of params) {
+            const val = p[field];
+            if (val && val !== "other" && val !== "unknown" && val !== "") {
+              map.set(val, (map.get(val) || 0) + 1);
+            }
+          }
+          result[field] = {};
+          Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, limit).forEach(([k, v]) => {
+            result[field][k] = { count: v };
+          });
+        }
+        return result;
+      };
+
+      res.json({
+        funnel: [
+          { stage: "Discovery", ...serializeStage(discovery) },
+          { stage: "Engagement", ...serializeStage(engagement) },
+          { stage: "Intent", ...serializeStage(intent) },
+          { stage: "Conversion", ...serializeStage(conversion) },
+        ],
+        parameters: {
+          discovery: aggregateParams(discoveryParams, ["pageType", "landingPage", "trafficSource"]),
+          engagement: aggregateParams(engagementParams, ["pageType", "ctaText", "ctaPosition", "serviceName", "contentType", "contentName", "depth"]),
+          intent: aggregateParams(intentParams, ["formName", "formLocation", "serviceInterest", "pageType", "serviceName", "trafficSource", "errorField", "callDuration"]),
+          conversion: aggregateParams(conversionParams, ["leadType", "serviceInterest", "leadSource", "landingPage"]),
+        },
+        totalEvents: evts.filter(e => e.isBot !== "true").length,
+        totalUsers: new Set(evts.filter(e => e.isBot !== "true").map(e => e.visitorId)).size,
       });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -3650,47 +3577,6 @@ export async function registerRoutes(
     }
   });
 
-  // Admin: check and invoice users
-  app.post("/api/admin/billing/invoice-check", requireAuth, async (req, res) => {
-    try {
-      const user = req.user as any;
-      if (user.role !== "admin") return res.status(403).json({ message: "Admin only" });
-      const allUsers = await storage.getAllUsers();
-      const results = [];
-      for (const u of allUsers) {
-        const result = await checkAndInvoiceUser(u.id, u.email);
-        if (result.invoiced) {
-          results.push({ userId: u.id, email: u.email, amount: result.amount });
-        }
-      }
-      res.json({ invoiced: results });
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
-
-  // Admin: all users usage
-  app.get("/api/admin/ai-usage", requireAuth, async (req, res) => {
-    try {
-      const user = req.user as any;
-      if (user.role !== "admin") return res.status(403).json({ message: "Admin only" });
-      const now = new Date();
-      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-      const allUsers = await storage.getAllUsers();
-      const usageByUser = [];
-      for (const u of allUsers) {
-        const cost = await storage.getAiUsageTotalCost(u.id, firstDay, lastDay);
-        if (cost > 0) {
-          usageByUser.push({ userId: u.id, email: u.email, username: u.username, totalCostUsd: cost });
-        }
-      }
-      usageByUser.sort((a, b) => b.totalCostUsd - a.totalCostUsd);
-      res.json({ usageByUser, billingThresholdUsd: 10 });
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
-  });
 
   // AI Settings
   app.get("/api/ai-settings", async (_req, res) => {
@@ -4826,13 +4712,111 @@ function getSnippetJs(): string {
     }
   }
 
+  function getPageType() {
+    var p = window.location.pathname.toLowerCase();
+    if (p === '/' || p === '/home') return 'homepage';
+    if (p.indexOf('/service') > -1 || p.indexOf('/product') > -1) return 'service';
+    if (p.indexOf('/blog') > -1 || p.indexOf('/article') > -1 || p.indexOf('/news') > -1) return 'content';
+    if (p.indexOf('/contact') > -1 || p.indexOf('/enquir') > -1 || p.indexOf('/get-in-touch') > -1 || p.indexOf('/book') > -1) return 'contact';
+    if (p.indexOf('/about') > -1 || p.indexOf('/team') > -1) return 'about';
+    if (p.indexOf('/pricing') > -1 || p.indexOf('/plans') > -1 || p.indexOf('/quote') > -1) return 'pricing';
+    if (p.indexOf('/checkout') > -1 || p.indexOf('/cart') > -1 || p.indexOf('/basket') > -1) return 'checkout';
+    if (p.indexOf('/thank') > -1 || p.indexOf('/success') > -1 || p.indexOf('/confirm') > -1) return 'confirmation';
+    if (p.indexOf('/case-stud') > -1 || p.indexOf('/portfolio') > -1 || p.indexOf('/testimonial') > -1) return 'social_proof';
+    if (p.indexOf('/faq') > -1 || p.indexOf('/help') > -1) return 'support';
+    return 'other';
+  }
+
+  function getServiceFromPath() {
+    var parts = window.location.pathname.split('/').filter(function(p) { return p; });
+    return parts.length > 1 ? parts[parts.length - 1].replace(/-/g, ' ') : '';
+  }
+
+  function isCtaElement(el) {
+    if (!el) return false;
+    var tag = el.tagName;
+    if (tag === 'BUTTON') return true;
+    if (tag === 'A') {
+      var cls = (el.className || '').toLowerCase();
+      var text = (el.textContent || '').toLowerCase().trim();
+      if (cls.indexOf('btn') > -1 || cls.indexOf('button') > -1 || cls.indexOf('cta') > -1) return true;
+      var ctaWords = ['get started','sign up','subscribe','buy','purchase','book','request','enquire','contact','call','free','download','learn more','get quote','start','try','join','register','apply','schedule','demo'];
+      for (var i = 0; i < ctaWords.length; i++) {
+        if (text.indexOf(ctaWords[i]) > -1) return true;
+      }
+    }
+    return false;
+  }
+
+  function getCtaPosition(el) {
+    if (!el) return 'unknown';
+    var rect = el.getBoundingClientRect();
+    var vh = window.innerHeight;
+    var y = rect.top + window.scrollY;
+    var docH = document.body.scrollHeight;
+    if (y < vh) return 'above_fold';
+    if (y < docH * 0.5) return 'mid_page';
+    return 'below_fold';
+  }
+
   function startTracking() {
     if (trackingActive) return;
     trackingActive = true;
-    sendEvent('pageview');
+    var pt = getPageType();
+
+    var isFirst = !localStorage.getItem('_da_returning');
+    if (isFirst) {
+      sendEvent('first_visit', { pageType: pt });
+      localStorage.setItem('_da_returning', '1');
+    }
+
+    var isNewSession = !sessionStorage.getItem('_da_session_started');
+    if (isNewSession) {
+      sendEvent('session_start', { pageType: pt, landingPage: window.location.pathname, trafficSource: document.referrer || 'direct' });
+      sessionStorage.setItem('_da_session_started', '1');
+    }
+
+    sendEvent('pageview', { pageType: pt, serviceName: getServiceFromPath() });
+
+    var keyPages = ['pricing','contact','checkout','service','confirmation'];
+    if (keyPages.indexOf(pt) > -1) {
+      sendEvent('key_page_view', { pageType: pt, serviceName: getServiceFromPath() });
+    }
 
     document.addEventListener('click', function(e) {
-      sendEvent('click', { target: e.target.tagName, text: (e.target.textContent || '').slice(0, 50) });
+      var el = e.target.closest ? e.target.closest('a, button, [role="button"], input[type="submit"]') : e.target;
+      if (!el) el = e.target;
+      var tag = el.tagName;
+      var text = (el.textContent || '').slice(0, 80).trim();
+      var href = el.getAttribute ? (el.getAttribute('href') || '') : '';
+
+      sendEvent('click', { target: tag, text: text });
+
+      if (isCtaElement(el)) {
+        sendEvent('cta_click', { ctaText: text, ctaPosition: getCtaPosition(el), pageType: pt, serviceName: getServiceFromPath() });
+      }
+
+      if (href.indexOf('tel:') === 0) {
+        var phoneClickTime = Date.now();
+        sendEvent('phone_click', { pageType: pt, serviceName: getServiceFromPath(), trafficSource: document.referrer || 'direct', callDuration: 0 });
+        var beforeUnload = function() {
+          var duration = Math.round((Date.now() - phoneClickTime) / 1000);
+          if (duration > 5) {
+            sendEvent('phone_click', { pageType: pt, serviceName: getServiceFromPath(), trafficSource: document.referrer || 'direct', callDuration: duration, isCallEnd: true });
+          }
+        };
+        window.addEventListener('focus', function onFocus() {
+          var duration = Math.round((Date.now() - phoneClickTime) / 1000);
+          if (duration > 5) {
+            sendEvent('phone_click', { pageType: pt, serviceName: getServiceFromPath(), trafficSource: document.referrer || 'direct', callDuration: duration, isCallEnd: true });
+          }
+          window.removeEventListener('focus', onFocus);
+        });
+      }
+
+      if (href.indexOf('mailto:') === 0) {
+        sendEvent('email_click', { pageType: pt, serviceName: getServiceFromPath() });
+      }
     });
 
     var lastScroll = 0;
@@ -4842,15 +4826,69 @@ function getSnippetJs(): string {
       var pct = Math.round((window.scrollY / sh) * 100);
       if (pct - lastScroll >= 25) {
         lastScroll = pct;
-        sendEvent('scroll', { depth: pct });
+        sendEvent('scroll', { depth: pct, percentageScrolled: pct, pageType: pt });
       }
     });
 
     document.querySelectorAll('form').forEach(function(form) {
-      form.addEventListener('submit', function() {
-        sendEvent('form_submit', { formId: form.id || 'unknown' });
+      var formName = form.getAttribute('name') || form.getAttribute('data-form-name') || form.id || 'unknown';
+      var formLocation = form.closest('[data-section]') ? form.closest('[data-section]').getAttribute('data-section') : getCtaPosition(form);
+      var formTracked = false;
+
+      form.addEventListener('focusin', function() {
+        if (!formTracked) {
+          formTracked = true;
+          sendEvent('form_start', { formName: formName, formLocation: formLocation, pageType: pt, serviceInterest: getServiceFromPath() });
+        }
       });
+
+      form.addEventListener('submit', function(ev) {
+        sendEvent('form_submit', { formId: form.id || 'unknown', formName: formName, formLocation: formLocation, pageType: pt, serviceName: getServiceFromPath() });
+
+        if (pt === 'contact' || pt === 'pricing' || pt === 'checkout' || formName.toLowerCase().indexOf('contact') > -1 || formName.toLowerCase().indexOf('enquir') > -1 || formName.toLowerCase().indexOf('lead') > -1 || formName.toLowerCase().indexOf('quote') > -1) {
+          sendEvent('generate_lead', { leadType: 'form', serviceInterest: getServiceFromPath(), leadSource: document.referrer || 'direct', landingPage: sessionStorage.getItem('_da_landing') || window.location.pathname, formName: formName });
+        }
+      });
+
+      form.addEventListener('invalid', function(ev) {
+        sendEvent('form_error', { formName: formName, formLocation: formLocation, pageType: pt, errorField: ev.target.name || ev.target.id || 'unknown' });
+      }, true);
     });
+
+    if (!sessionStorage.getItem('_da_landing')) {
+      sessionStorage.setItem('_da_landing', window.location.pathname);
+    }
+
+    try {
+      var chatStarted = false;
+      var chatObserver = new MutationObserver(function(mutations) {
+        mutations.forEach(function(m) {
+          m.addedNodes.forEach(function(node) {
+            if (node.nodeType === 1) {
+              var el = node;
+              var cls = (el.className || '').toString().toLowerCase();
+              var id = (el.id || '').toLowerCase();
+              var isChatEl = cls.indexOf('chat') > -1 || id.indexOf('chat') > -1 || cls.indexOf('livechat') > -1 || cls.indexOf('tawk') > -1 || cls.indexOf('intercom') > -1 || cls.indexOf('drift') > -1 || cls.indexOf('crisp') > -1 || cls.indexOf('zendesk') > -1 || cls.indexOf('hubspot-messages') > -1;
+              if (isChatEl && !chatStarted) {
+                chatStarted = true;
+                sendEvent('chat_start', { pageType: pt });
+              }
+              if (isChatEl) {
+                var chatText = (el.textContent || '').toLowerCase();
+                var leadIndicators = ['thank', 'submitted', 'received', 'booked', 'confirmed', 'success', 'email', 'phone', 'call back', 'appointment'];
+                for (var li = 0; li < leadIndicators.length; li++) {
+                  if (chatText.indexOf(leadIndicators[li]) > -1 && chatText.length > 10 && chatText.length < 500) {
+                    sendEvent('chat_lead', { pageType: pt, chatContent: chatText.slice(0, 100) });
+                    break;
+                  }
+                }
+              }
+            }
+          });
+        });
+      });
+      chatObserver.observe(document.body, { childList: true, subtree: true });
+    } catch(ce) {}
 
     var clickCounts = {};
     document.addEventListener('click', function(e) {
@@ -4861,6 +4899,25 @@ function getSnippetJs(): string {
         clickCounts[key] = 0;
       }
     });
+
+    var observeContent = function() {
+      document.querySelectorAll('[data-content-type]').forEach(function(el) {
+        var obs = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+              sendEvent('content_interaction', {
+                contentType: el.getAttribute('data-content-type'),
+                contentName: el.getAttribute('data-content-name') || el.textContent.slice(0, 50)
+              });
+              obs.unobserve(el);
+            }
+          });
+        }, { threshold: 0.5 });
+        obs.observe(el);
+      });
+    };
+    if (document.readyState === 'complete') observeContent();
+    else window.addEventListener('load', observeContent);
   }
 
   function recordConsent(given, categories) {

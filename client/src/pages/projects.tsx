@@ -96,7 +96,7 @@ interface WizardData {
   description: string;
 }
 
-function ProjectWizard({
+export function ProjectWizard({
   onComplete,
   onClose,
 }: {
@@ -223,9 +223,9 @@ function ProjectWizard({
                   name="domain"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Domain</FormLabel>
+                      <FormLabel>Website URL</FormLabel>
                       <FormControl>
-                        <Input placeholder="example.com" {...field} data-testid="input-project-domain" />
+                        <Input placeholder="https://example.com" {...field} data-testid="input-project-domain" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
