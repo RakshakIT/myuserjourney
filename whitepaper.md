@@ -57,7 +57,7 @@ MyUserJourney eliminates these trade-offs by introducing a new category of analy
 
 ### Key Differentiators
 
-- **Complete data sovereignty**: All data remains on the operator's infrastructure. No third-party data transfers, no cloud dependency, no vendor lock-in.
+- **Data sovereignty by design**: Core analytics data remains in the operator's own database. Optional integrations (geolocation, AI, payments) involve limited, configurable data exchange with third-party services under the operator's control. No vendor lock-in.
 - **Regulatory compliance by design**: Full compliance with UK GDPR, UK PECR, EU GDPR, and EU ePrivacy Directive — not as a configuration option, but as an architectural guarantee.
 - **Eight integrated AI capabilities**: Predictive analytics, UX auditing, marketing copilot, natural language querying, funnel generation, custom report generation, SEO analysis, and content gap analysis — all powered by a unified AI service layer.
 - **Single deployment**: Analytics, AI, SEO, PPC, CMS, consent management, and compliance tools in one installation. No integration complexity, no data synchronisation challenges.
@@ -171,7 +171,7 @@ Rather than treating privacy as a constraint to be worked around, MyUserJourney 
 - **Cookieless tracking mode**: Full analytics capability without cookies, localStorage, or any persistent identifiers — eliminating the consent requirement for basic analytics under PECR and ePrivacy.
 - **Pre-anonymisation geolocation**: IP-based geolocation is resolved before IP anonymisation, ensuring geographic intelligence is available without storing personal data.
 - **Server-side consent enforcement**: Every event collection request is validated against the visitor's consent state server-side, preventing client-side consent bypass.
-- **Self-hosted data sovereignty**: All data remains on the operator's infrastructure, eliminating cross-border transfer concerns entirely.
+- **Self-hosted data sovereignty**: Core analytics data remains in the operator's own database. Optional integrations (geolocation, AI, payments) involve limited, configurable data exchange with third-party services, all under the operator's control and configuration.
 
 ### 3.2 Why This Is Different
 
@@ -387,10 +387,10 @@ This approach preserves geographic intelligence while ensuring no reversible per
 
 Self-hosted deployment provides security advantages that cloud-hosted analytics cannot match:
 
-1. **No third-party data exposure**: Analytics data never leaves the operator's infrastructure
+1. **Minimal third-party data exposure**: Core analytics data stays in the operator's database. Optional integrations (geolocation via ip-api.com, AI via OpenAI, payments via Stripe) involve limited, configurable data exchange with third-party services under the operator's control
 2. **Network isolation**: The analytics platform can be deployed behind firewalls, VPNs, or private networks
 3. **Audit control**: Full access to application logs, database queries, and network traffic for security auditing
-4. **Compliance simplification**: No Data Processing Agreements with third-party analytics vendors, no cross-border transfer mechanisms required
+4. **Compliance simplification**: Reduced Data Processing Agreement burden compared to cloud-hosted analytics. Optional third-party integrations are configurable and can be disabled
 5. **Incident response**: Full control over incident response timelines and procedures
 
 ---
