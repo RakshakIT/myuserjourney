@@ -14,6 +14,7 @@ import fs from "fs";
 import nodemailer from "nodemailer";
 import { invalidateTrackingCache } from "./tracking-inject";
 import { registerAdminRoutes } from "./admin-routes";
+import { getGA4ConnectionForProject, refreshAccessToken, fetchGA4LeadJourneyData, runGA4Report } from "./ga4-client";
 
 const upload = multer({
   dest: "uploads/",
@@ -159,6 +160,39 @@ function classifyTrafficSource(referrer: string | null | undefined, page: string
     if (refDomain === projectDomain) return "internal";
   } catch {}
   return "referral";
+}
+
+function extractSearchKeyword(referrer: string | null | undefined): string | null {
+  if (!referrer || referrer === "Direct" || referrer === "" || referrer === "(none)") return null;
+  try {
+    const url = new URL(referrer.startsWith("http") ? referrer : `https://${referrer}`);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    const params = url.searchParams;
+    const searchEngineParams: Record<string, string[]> = {
+      "google": ["q"],
+      "bing": ["q"],
+      "yahoo": ["p", "q"],
+      "duckduckgo": ["q"],
+      "baidu": ["wd", "word"],
+      "yandex": ["text"],
+      "ecosia": ["q"],
+      "ask": ["q"],
+      "aol": ["q"],
+      "startpage": ["query"],
+      "qwant": ["q"],
+      "brave": ["q"],
+    };
+    for (const [engine, keys] of Object.entries(searchEngineParams)) {
+      if (host.includes(engine)) {
+        for (const key of keys) {
+          const val = params.get(key);
+          if (val && val.trim()) return val.trim();
+        }
+        return null;
+      }
+    }
+  } catch {}
+  return null;
 }
 
 function matchesRules(evt: any, rules: Array<{ field: string; operator: string; value: string }>): boolean {
@@ -1137,6 +1171,7 @@ export async function registerRoutes(
           eventCount: evts.length,
           events: evts,
           referrer: first.referrer,
+          searchKeyword: extractSearchKeyword(first.referrer),
         };
       });
       journeys.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
@@ -3147,33 +3182,44 @@ export async function registerRoutes(
       const lowCtr = keywords.filter(k => k.position <= 10 && k.ctr < 3);
       const contentGaps = keywords.filter(k => k.impressions > 50 && k.clicks === 0);
 
-      const systemPrompt = `You are an expert SEO strategist. Analyze the Google Search Console keyword data for "${domain}" and provide a comprehensive SEO strategy. Return valid JSON with this structure:
+      const systemPrompt = `You are an expert SEO strategist and digital marketing consultant. Analyze the Google Search Console keyword data for "${domain}" and provide a comprehensive, detailed SEO strategy report. Return valid JSON with this structure:
 {
-  "summary": "2-3 paragraph executive summary of the site's search performance",
-  "quickWins": [{"keyword": "string", "currentPosition": number, "action": "string", "expectedImpact": "high/medium/low", "page": "string"}],
-  "contentGaps": [{"topic": "string", "keywords": ["string"], "suggestedTitle": "string", "searchIntent": "informational/transactional/navigational", "priority": "high/medium/low"}],
-  "lowCtrFixes": [{"keyword": "string", "currentCtr": number, "position": number, "suggestedTitle": "string", "suggestedDescription": "string"}],
-  "recommendations": [{"category": "string", "title": "string", "description": "string", "priority": "high/medium/low", "effort": "low/medium/high"}]
+  "summary": "A detailed 4-6 paragraph executive summary covering: overall search footprint assessment, biggest ranking opportunities, misaligned/low-value traffic concerns, local/commercial intent analysis, and a clear strategic direction. Reference specific keywords and their positions/impressions. Be highly specific with numbers.",
+  "quickWins": [{"keyword": "string", "currentPosition": number, "action": "detailed multi-sentence action plan including: page URL structure suggestion, title tag (≤60 chars), meta description (≤155 chars), H1/H2 structure, content essentials (word count, topics to cover), internal linking suggestions, and CTA recommendations", "expectedImpact": "high/medium/low", "page": "string"}],
+  "contentGaps": [{"topic": "string", "keywords": ["string"], "suggestedTitle": "string", "searchIntent": "informational/transactional/navigational", "priority": "high/medium/low", "contentPlan": "detailed content plan including: suggested URL, title tag, H1, H2 structure, content sections to include, word count target, internal linking strategy, and schema markup suggestions"}],
+  "lowCtrFixes": [{"keyword": "string", "currentCtr": number, "position": number, "suggestedTitle": "optimized title tag ≤60 chars designed for higher CTR", "suggestedDescription": "optimized meta description ≤155 chars with clear value proposition and call to action", "analysis": "why the current CTR is low and what the searcher intent likely is"}],
+  "recommendations": [{"category": "On-Page SEO/Technical SEO/Content Strategy/Local SEO/Link Building/UX", "title": "string", "description": "detailed multi-sentence recommendation with specific implementation steps", "priority": "high/medium/low", "effort": "low/medium/high", "expectedOutcome": "measurable expected result"}]
 }
-Limit each array to maximum 10 items. Focus on actionable, specific recommendations.`;
+Limit each array to maximum 10 items. Be extremely specific and actionable — reference actual keywords, suggest exact title tags, meta descriptions, URL structures, and content outlines. Think like a senior SEO consultant writing a strategy document for a client.`;
 
       const userPrompt = `Analyze these ${keywords.length} keywords for ${domain}:
-Top keywords by clicks: ${JSON.stringify(topKeywords.slice(0, 50))}
-Quick win opportunities (pos 4-15): ${quickWins.length} keywords
-Low CTR keywords (pos ≤10, CTR <3%): ${lowCtr.length} keywords
-Content gaps (impressions >50, 0 clicks): ${contentGaps.length} keywords
-Sample quick wins: ${JSON.stringify(quickWins.slice(0, 20).map(k => ({ q: k.query, pos: k.position, i: k.impressions, c: k.clicks })))}
-Sample low CTR: ${JSON.stringify(lowCtr.slice(0, 20).map(k => ({ q: k.query, ctr: k.ctr, pos: k.position })))}`;
+
+TOP KEYWORDS BY PERFORMANCE:
+${JSON.stringify(topKeywords.slice(0, 80))}
+
+QUICK WIN OPPORTUNITIES (Position 4-15, already ranking but can push higher):
+${quickWins.length} keywords found
+Sample: ${JSON.stringify(quickWins.slice(0, 30).map(k => ({ q: k.query, pos: k.position, i: k.impressions, c: k.clicks, p: k.page })))}
+
+LOW CTR KEYWORDS (Position ≤10 but CTR <3%, snippet optimization needed):
+${lowCtr.length} keywords found
+Sample: ${JSON.stringify(lowCtr.slice(0, 30).map(k => ({ q: k.query, ctr: k.ctr, pos: k.position, p: k.page })))}
+
+CONTENT GAPS (Impressions >50 but 0 clicks, need new/better content):
+${contentGaps.length} keywords found
+Sample: ${JSON.stringify(contentGaps.slice(0, 30).map(k => ({ q: k.query, i: k.impressions, pos: k.position })))}
+
+Provide a comprehensive strategy report as if you were a senior SEO consultant presenting to a client. Be specific about page URLs, title tags, meta descriptions, content structure, and internal linking.`;
 
       const result = await aiChatJSON(systemPrompt, userPrompt);
 
       const report = await storage.createGscStrategyReport({
         projectId: req.params.id,
-        summary: result.summary || "",
-        quickWins: result.quickWins || [],
-        contentGaps: result.contentGaps || [],
-        lowCtrFixes: result.lowCtrFixes || [],
-        recommendations: result.recommendations || [],
+        summary: result.data?.summary || "",
+        quickWins: result.data?.quickWins || [],
+        contentGaps: result.data?.contentGaps || [],
+        lowCtrFixes: result.data?.lowCtrFixes || [],
+        recommendations: result.data?.recommendations || [],
         keywordCount: keywords.length,
       });
 
@@ -3260,19 +3306,19 @@ Sample low CTR: ${JSON.stringify(lowCtr.slice(0, 20).map(k => ({ q: k.query, ctr
         } else if (et === "content_interaction") {
           paramsList!.push({ type: "content_interaction", contentType: meta.contentType || "", contentName: meta.contentName || "" });
         } else if (et === "form_start") {
-          paramsList!.push({ type: "form_start", formName: meta.formName || "", formLocation: meta.formLocation || "", serviceInterest: meta.serviceInterest || "", pageType: meta.pageType || "other" });
+          paramsList!.push({ type: "form_start", formName: meta.formName || "", formLocation: meta.formLocation || "", serviceInterest: meta.serviceInterest || "", page: e.page || "", pageType: meta.pageType || "" });
         } else if (et === "form_submit") {
-          paramsList!.push({ type: "form_submit", formName: meta.formName || meta.formId || "", pageType: meta.pageType || "other", serviceName: meta.serviceName || "" });
+          paramsList!.push({ type: "form_submit", formName: meta.formName || meta.formId || "", page: e.page || "", pageType: meta.pageType || "", serviceName: meta.serviceName || "" });
         } else if (et === "form_error") {
-          paramsList!.push({ type: "form_error", formName: meta.formName || "", errorField: meta.errorField || "" });
+          paramsList!.push({ type: "form_error", formName: meta.formName || "", errorField: meta.errorField || "", page: e.page || "" });
         } else if (et === "phone_click") {
-          paramsList!.push({ type: "phone_click", pageType: meta.pageType || "other", serviceName: meta.serviceName || "", trafficSource: meta.trafficSource || e.trafficSource || "direct", callDuration: meta.callDuration || 0 });
+          paramsList!.push({ type: "phone_click", page: e.page || "", pageType: meta.pageType || "", serviceName: meta.serviceName || "", trafficSource: meta.trafficSource || e.trafficSource || "direct", callDuration: meta.callDuration || 0 });
         } else if (et === "email_click") {
-          paramsList!.push({ type: "email_click", pageType: meta.pageType || "other", serviceName: meta.serviceName || "" });
+          paramsList!.push({ type: "email_click", page: e.page || "", pageType: meta.pageType || "", serviceName: meta.serviceName || "" });
         } else if (et === "chat_start") {
-          paramsList!.push({ type: "chat_start", pageType: meta.pageType || "other" });
+          paramsList!.push({ type: "chat_start", page: e.page || "", pageType: meta.pageType || "" });
         } else if (et === "chat_lead") {
-          paramsList!.push({ type: "chat_lead", pageType: meta.pageType || "other" });
+          paramsList!.push({ type: "chat_lead", page: e.page || "", pageType: meta.pageType || "" });
         } else if (et === "generate_lead") {
           paramsList!.push({ type: "generate_lead", leadType: meta.leadType || "form", serviceInterest: meta.serviceInterest || "", leadSource: meta.leadSource || e.trafficSource || "direct", landingPage: meta.landingPage || "" });
         }
@@ -3285,20 +3331,50 @@ Sample low CTR: ${JSON.stringify(lowCtr.slice(0, 20).map(k => ({ q: k.query, ctr
         breakdown: Object.entries(s.breakdown).map(([type, d]) => ({ type, count: d.count, users: d.users.size })).sort((a, b) => b.count - a.count),
       });
 
-      const aggregateParams = (params: any[], fields: string[], limit = 20) => {
-        const result: Record<string, Record<string, { count: number }>> = {};
-        for (const field of fields) {
-          const map = new Map<string, number>();
-          for (const p of params) {
-            const val = p[field];
-            if (val && val !== "other" && val !== "unknown" && val !== "") {
-              map.set(val, (map.get(val) || 0) + 1);
+      const EVENT_PARAM_FIELDS: Record<string, string[]> = {
+        pageview: ["page", "pageType"],
+        session_start: ["landingPage", "trafficSource"],
+        first_visit: ["pageType"],
+        scroll: ["depth", "pageType"],
+        key_page_view: ["pageType", "serviceName"],
+        cta_click: ["ctaText", "ctaPosition", "pageType", "serviceName"],
+        content_interaction: ["contentType", "contentName"],
+        click: ["pageType"],
+        form_start: ["formName", "formLocation", "serviceInterest", "page", "pageType"],
+        form_submit: ["formName", "page", "pageType", "serviceName"],
+        form_error: ["formName", "errorField", "page"],
+        phone_click: ["page", "pageType", "serviceName", "trafficSource", "callDuration"],
+        email_click: ["page", "pageType", "serviceName"],
+        chat_start: ["page", "pageType"],
+        chat_lead: ["page", "pageType"],
+        generate_lead: ["leadType", "serviceInterest", "leadSource", "landingPage"],
+      };
+
+      const aggregateParamsByEventType = (params: any[], limit = 20) => {
+        const byType: Record<string, any[]> = {};
+        for (const p of params) {
+          if (!byType[p.type]) byType[p.type] = [];
+          byType[p.type].push(p);
+        }
+        const result: Record<string, Record<string, Record<string, { count: number }>>> = {};
+        for (const [eventType, events] of Object.entries(byType)) {
+          const fields = EVENT_PARAM_FIELDS[eventType] || [];
+          result[eventType] = {};
+          for (const field of fields) {
+            const map = new Map<string, number>();
+            for (const ev of events) {
+              const val = ev[field];
+              if (val && val !== "other" && val !== "unknown" && val !== "" && val !== 0) {
+                map.set(String(val), (map.get(String(val)) || 0) + 1);
+              }
+            }
+            if (map.size > 0) {
+              result[eventType][field] = {};
+              Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, limit).forEach(([k, v]) => {
+                result[eventType][field][k] = { count: v };
+              });
             }
           }
-          result[field] = {};
-          Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, limit).forEach(([k, v]) => {
-            result[field][k] = { count: v };
-          });
         }
         return result;
       };
@@ -3310,15 +3386,428 @@ Sample low CTR: ${JSON.stringify(lowCtr.slice(0, 20).map(k => ({ q: k.query, ctr
           { stage: "Intent", ...serializeStage(intent) },
           { stage: "Conversion", ...serializeStage(conversion) },
         ],
-        parameters: {
-          discovery: aggregateParams(discoveryParams, ["pageType", "landingPage", "trafficSource"]),
-          engagement: aggregateParams(engagementParams, ["pageType", "ctaText", "ctaPosition", "serviceName", "contentType", "contentName", "depth"]),
-          intent: aggregateParams(intentParams, ["formName", "formLocation", "serviceInterest", "pageType", "serviceName", "trafficSource", "errorField", "callDuration"]),
-          conversion: aggregateParams(conversionParams, ["leadType", "serviceInterest", "leadSource", "landingPage"]),
+        eventParameters: {
+          discovery: aggregateParamsByEventType(discoveryParams),
+          engagement: aggregateParamsByEventType(engagementParams),
+          intent: aggregateParamsByEventType(intentParams),
+          conversion: aggregateParamsByEventType(conversionParams),
         },
         totalEvents: evts.filter(e => e.isBot !== "true").length,
         totalUsers: new Set(evts.filter(e => e.isBot !== "true").map(e => e.visitorId)).size,
       });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/projects/:id/lead-journey/strategy", requireAuth, async (req, res) => {
+    try {
+      const { from, to } = parseDateRange(req.query);
+      const evts = await storage.getEventsByDateRange(req.params.id, from, to);
+      const project = await storage.getProject(req.params.id);
+      const domain = project?.domain || "the website";
+
+      const discoveryTypes = new Set(["pageview", "session_start", "first_visit"]);
+      const engagementTypes = new Set(["scroll", "key_page_view", "cta_click", "content_interaction", "click"]);
+      const intentTypes = new Set(["form_start", "form_submit", "form_error", "phone_click", "email_click", "chat_start", "chat_lead"]);
+      const conversionTypes = new Set(["generate_lead"]);
+
+      const stages: Record<string, { events: number; users: Set<string>; byType: Record<string, number> }> = {
+        Discovery: { events: 0, users: new Set(), byType: {} },
+        Engagement: { events: 0, users: new Set(), byType: {} },
+        Intent: { events: 0, users: new Set(), byType: {} },
+        Conversion: { events: 0, users: new Set(), byType: {} },
+      };
+
+      const topPages: Record<string, number> = {};
+      const formPages: Record<string, number> = {};
+      const ctaTexts: Record<string, number> = {};
+      const trafficSources: Record<string, number> = {};
+      const allUsers = new Set<string>();
+
+      for (const e of evts) {
+        if (e.isBot === "true") continue;
+        const vid = e.visitorId || "anon";
+        const et = e.eventType;
+        const meta = (e.metadata || {}) as Record<string, any>;
+        allUsers.add(vid);
+
+        let stageName: string | null = null;
+        if (discoveryTypes.has(et)) stageName = "Discovery";
+        else if (engagementTypes.has(et)) stageName = "Engagement";
+        else if (intentTypes.has(et)) stageName = "Intent";
+        else if (conversionTypes.has(et)) stageName = "Conversion";
+        if (!stageName) continue;
+
+        const stage = stages[stageName];
+        stage.events++;
+        stage.users.add(vid);
+        stage.byType[et] = (stage.byType[et] || 0) + 1;
+
+        if (e.page) topPages[e.page] = (topPages[e.page] || 0) + 1;
+        if ((et === "form_submit" || et === "form_start" || et === "form_error") && e.page) {
+          formPages[e.page] = (formPages[e.page] || 0) + 1;
+        }
+        if (et === "cta_click" && meta.ctaText) {
+          ctaTexts[meta.ctaText] = (ctaTexts[meta.ctaText] || 0) + 1;
+        }
+        const ts = meta.trafficSource || e.trafficSource;
+        if (ts) trafficSources[ts] = (trafficSources[ts] || 0) + 1;
+      }
+
+      const stagesSummary = Object.entries(stages).map(([name, s]) => ({
+        stage: name,
+        events: s.events,
+        users: s.users.size,
+        eventBreakdown: Object.entries(s.byType).sort((a, b) => b[1] - a[1]).map(([t, c]) => `${t}: ${c}`),
+      }));
+
+      const topPagesArr = Object.entries(topPages).sort((a, b) => b[1] - a[1]).slice(0, 20);
+      const formPagesArr = Object.entries(formPages).sort((a, b) => b[1] - a[1]).slice(0, 15);
+      const ctaArr = Object.entries(ctaTexts).sort((a, b) => b[1] - a[1]).slice(0, 15);
+      const sourceArr = Object.entries(trafficSources).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+      const totalEvents = evts.filter(e => e.isBot !== "true").length;
+      const totalUsers = allUsers.size;
+
+      const convRate = stages.Discovery.users.size > 0
+        ? ((stages.Conversion.users.size / stages.Discovery.users.size) * 100).toFixed(2)
+        : "0";
+      const intentRate = stages.Discovery.users.size > 0
+        ? ((stages.Intent.users.size / stages.Discovery.users.size) * 100).toFixed(2)
+        : "0";
+
+      const systemPrompt = `You are an expert digital analytics strategist, CRO (Conversion Rate Optimization) specialist, and marketing consultant. Analyze the lead journey funnel data for "${domain}" and provide an extremely comprehensive strategy report. Return valid JSON with this structure:
+{
+  "summary": "A detailed 4-6 paragraph executive summary covering: overall funnel health assessment with specific conversion rates, biggest bottlenecks with exact drop-off percentages, traffic quality analysis, user behaviour patterns across stages, comparison to industry benchmarks (typical B2B/B2C conversion rates), and a clear strategic direction. Reference specific pages, event types, and numbers throughout. Be extremely specific.",
+  "funnelAnalysis": [
+    {"stage": "string", "health": "healthy/warning/critical", "analysis": "detailed 3-5 sentence analysis of this stage including: volume assessment, user engagement quality, comparison to the other stages, specific event types driving this stage, and which pages are most active. Reference actual data.", "dropOffInsight": "detailed explanation of what's causing drop-off including: specific pages where users leave, missing engagement signals, UX friction points, and content gaps that could be addressed"}
+  ],
+  "quickWins": [
+    {"title": "string", "action": "detailed multi-sentence action plan with specific implementation steps: what page to modify, what CTA text to use, what form fields to add/remove, where to place elements, what copy changes to make. Be prescriptive.", "expectedImpact": "high/medium/low", "stage": "Discovery/Engagement/Intent/Conversion", "metric": "specific KPI with estimated improvement (e.g., 'Expected to increase form start rate from 2% to 5%')"}
+  ],
+  "conversionOptimizations": [
+    {"area": "string", "currentIssue": "detailed description of the current problem with data evidence", "suggestedFix": "detailed multi-sentence recommendation with step-by-step implementation: page layout changes, CTA placement, form optimization, trust signals to add, social proof elements, urgency/scarcity tactics, and A/B test suggestions", "priority": "high/medium/low", "effort": "low/medium/high"}
+  ],
+  "journeyInsights": [
+    {"insight": "a specific, non-obvious finding from the data", "evidence": "exact data points with numbers supporting this insight", "recommendation": "actionable recommendation with implementation details", "category": "funnel/engagement/content/conversion"}
+  ],
+  "recommendations": [
+    {"category": "CRO/UX/Content/Traffic/Technical/Email Marketing", "title": "string", "description": "detailed multi-sentence recommendation with specific implementation steps, expected timeline, and success metrics. Think like a senior consultant writing a strategy document.", "priority": "high/medium/low", "effort": "low/medium/high", "expectedOutcome": "measurable expected result with specific numbers"}
+  ]
+}
+Limit each array to maximum 8 items. Be extremely specific, actionable, and data-driven. Reference actual pages, events, and numbers from the data provided. Think like a senior digital marketing consultant presenting a comprehensive strategy to a client.`;
+
+      const userPrompt = `Analyze this lead journey funnel data for ${domain}:
+
+FUNNEL OVERVIEW:
+- Total events: ${totalEvents}, Total users: ${totalUsers}
+- Overall conversion rate (Discovery → Conversion): ${convRate}%
+- Intent rate (Discovery → Intent): ${intentRate}%
+
+STAGE BREAKDOWN:
+${stagesSummary.map(s => `${s.stage}: ${s.users} users, ${s.events} events\n  Events: ${s.eventBreakdown.join(", ")}`).join("\n")}
+
+DROP-OFF ANALYSIS:
+- Discovery → Engagement: ${stages.Discovery.users.size > 0 ? ((1 - stages.Engagement.users.size / stages.Discovery.users.size) * 100).toFixed(1) : 0}% drop-off
+- Engagement → Intent: ${stages.Engagement.users.size > 0 ? ((1 - stages.Intent.users.size / stages.Engagement.users.size) * 100).toFixed(1) : 0}% drop-off
+- Intent → Conversion: ${stages.Intent.users.size > 0 ? ((1 - stages.Conversion.users.size / stages.Intent.users.size) * 100).toFixed(1) : 0}% drop-off
+
+TOP PAGES BY EVENTS:
+${topPagesArr.map(([p, c]) => `${p}: ${c} events`).join("\n")}
+
+FORM ACTIVITY BY PAGE:
+${formPagesArr.length > 0 ? formPagesArr.map(([p, c]) => `${p}: ${c} form events`).join("\n") : "No form events recorded"}
+
+TOP CTA CLICKS:
+${ctaArr.length > 0 ? ctaArr.map(([t, c]) => `"${t}": ${c} clicks`).join("\n") : "No CTA clicks recorded"}
+
+TRAFFIC SOURCES:
+${sourceArr.length > 0 ? sourceArr.map(([s, c]) => `${s}: ${c} events`).join("\n") : "No traffic source data"}`;
+
+      const result = await aiChatJSON(systemPrompt, userPrompt);
+
+      const report = await storage.createLeadJourneyReport({
+        projectId: req.params.id,
+        summary: result.data?.summary || result.summary || "",
+        funnelAnalysis: result.data?.funnelAnalysis || result.funnelAnalysis || [],
+        quickWins: result.data?.quickWins || result.quickWins || [],
+        conversionOptimizations: result.data?.conversionOptimizations || result.conversionOptimizations || [],
+        journeyInsights: result.data?.journeyInsights || result.journeyInsights || [],
+        recommendations: result.data?.recommendations || result.recommendations || [],
+        totalEvents: totalEvents,
+        totalUsers: totalUsers,
+      });
+
+      res.json(report);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/projects/:id/lead-journey/strategies", requireAuth, async (req, res) => {
+    try {
+      const reports = await storage.getLeadJourneyReports(req.params.id);
+      res.json(reports);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/projects/:id/lead-journey/strategy/:reportId", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteLeadJourneyReport(req.params.reportId);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/projects/:id/ga4/status", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const project = await storage.getProject(req.params.id);
+      if (!project) return res.status(404).json({ message: "Project not found" });
+      if (user.role !== "admin" && project.userId !== user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const connection = await getGA4ConnectionForProject(req.params.id);
+      res.json({
+        connected: connection.connected,
+        propertyId: connection.propertyId || null,
+        hasCredentials: connection.hasCredentials || false,
+        hasOAuth: connection.hasOAuth || false,
+        hasPropertyId: connection.hasPropertyId || false,
+      });
+    } catch (err: any) {
+      res.json({ connected: false, hasCredentials: false, hasOAuth: false, hasPropertyId: false });
+    }
+  });
+
+  app.get("/api/projects/:id/lead-journey/ga4", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const project = await storage.getProject(req.params.id);
+      if (!project) return res.status(404).json({ message: "Project not found" });
+      if (user.role !== "admin" && project.userId !== user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const connection = await getGA4ConnectionForProject(req.params.id);
+      if (!connection.connected || !connection.integration || !connection.propertyId) {
+        return res.status(400).json({ message: "GA4 is not connected. Please connect Google Analytics in the Integrations page and set your GA4 Property ID in Project Settings." });
+      }
+
+      console.log(`[GA4] Fetching lead journey for project ${req.params.id}, property ${connection.propertyId}`);
+      const accessToken = await refreshAccessToken(connection.integration as any, project as any);
+      const { from, to } = parseDateRange(req.query);
+      const startDate = from.toISOString().split("T")[0];
+      const endDate = to.toISOString().split("T")[0];
+
+      const stages = await fetchGA4LeadJourneyData(accessToken, connection.propertyId, startDate, endDate);
+      console.log(`[GA4] Lead journey stages:`, stages.map(s => `${s.name}: ${s.events} events, ${s.users} users`));
+      res.json({ stages, source: "ga4" });
+    } catch (err: any) {
+      console.error(`[GA4] Lead journey error:`, err.message);
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/projects/:id/funnels/:funnelId/analysis/ga4", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const project = await storage.getProject(req.params.id);
+      if (!project) return res.status(404).json({ message: "Project not found" });
+      if (user.role !== "admin" && project.userId !== user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const connection = await getGA4ConnectionForProject(req.params.id);
+      if (!connection.connected || !connection.integration || !connection.propertyId) {
+        return res.status(400).json({ message: "GA4 is not connected." });
+      }
+
+      const funnel = await storage.getFunnel(req.params.funnelId);
+      if (!funnel) return res.status(404).json({ message: "Funnel not found" });
+
+      const accessToken = await refreshAccessToken(connection.integration as any, project as any);
+      const { from, to } = parseDateRange(req.query);
+      const startDate = from.toISOString().split("T")[0];
+      const endDate = to.toISOString().split("T")[0];
+
+      const steps = (funnel.steps as Array<{ name: string; type: string; value: string }>) || [];
+      const stepsData = [];
+      let previousUsers = 0;
+
+      const funnelStepToGA4Event = (step: { type: string; value: string }): string => {
+        if (step.type === "pageview") return "page_view";
+        if (step.type === "event") return step.value || "page_view";
+        if (step.type === "click") return "click";
+        return step.value || "page_view";
+      };
+
+      for (let i = 0; i < steps.length; i++) {
+        const step = steps[i];
+        const eventName = funnelStepToGA4Event(step);
+
+        let dimensionFilter: any = {
+          filter: {
+            fieldName: "eventName",
+            stringFilter: { matchType: "EXACT", value: eventName },
+          },
+        };
+
+        if (step.type === "pageview" && step.value) {
+          dimensionFilter = {
+            andGroup: {
+              expressions: [
+                { filter: { fieldName: "eventName", stringFilter: { matchType: "EXACT", value: "page_view" } } },
+                { filter: { fieldName: "pagePathPlusQueryString", stringFilter: { matchType: "CONTAINS", value: step.value } } },
+              ],
+            },
+          };
+        }
+
+        try {
+          const report = await runGA4Report(accessToken, connection.propertyId, {
+            dateRanges: [{ startDate, endDate }],
+            dimensions: [{ name: "eventName" }],
+            metrics: [{ name: "totalUsers" }, { name: "eventCount" }],
+            dimensionFilter,
+          });
+
+          const row = report.rows?.[0];
+          const users = parseInt(row?.metricValues?.[0]?.value || "0", 10);
+          const events = parseInt(row?.metricValues?.[1]?.value || "0", 10);
+          const conversionRate = i === 0 ? 100 : previousUsers > 0 ? (users / previousUsers) * 100 : 0;
+          const dropOff = i === 0 ? 0 : previousUsers > 0 ? ((previousUsers - users) / previousUsers) * 100 : 0;
+
+          stepsData.push({
+            step: i + 1,
+            name: step.name || eventName,
+            type: step.type,
+            value: step.value,
+            users,
+            events,
+            conversionRate: Math.round(conversionRate * 10) / 10,
+            dropOff: Math.round(dropOff * 10) / 10,
+          });
+
+          if (i === 0 || users > 0) previousUsers = users;
+        } catch {
+          stepsData.push({
+            step: i + 1,
+            name: step.name || eventName,
+            type: step.type,
+            value: step.value,
+            users: 0,
+            events: 0,
+            conversionRate: 0,
+            dropOff: 0,
+          });
+        }
+      }
+
+      res.json({
+        funnel: { id: funnel.id, name: funnel.name },
+        steps: stepsData,
+        source: "ga4",
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/projects/:id/reports/:reportId/data/ga4", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const project = await storage.getProject(req.params.id);
+      if (!project) return res.status(404).json({ message: "Project not found" });
+      if (user.role !== "admin" && project.userId !== user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const connection = await getGA4ConnectionForProject(req.params.id);
+      if (!connection.connected || !connection.integration || !connection.propertyId) {
+        return res.status(400).json({ message: "GA4 is not connected." });
+      }
+
+      const report = await storage.getCustomReport(req.params.reportId);
+      if (!report) return res.status(404).json({ message: "Report not found" });
+
+      const accessToken = await refreshAccessToken(connection.integration as any, project as any);
+      const { from, to } = parseDateRange(req.query);
+      const startDate = from.toISOString().split("T")[0];
+      const endDate = to.toISOString().split("T")[0];
+
+      const metricsConfig = (report.metrics as string[]) || ["pageViews"];
+      const dimensionsConfig = (report.dimensions as string[]) || ["date"];
+
+      const metricMapping: Record<string, string> = {
+        pageViews: "screenPageViews",
+        visitors: "totalUsers",
+        sessions: "sessions",
+        clicks: "eventCount",
+        bounceRate: "bounceRate",
+        scrolls: "eventCount",
+        avgSessionDuration: "averageSessionDuration",
+        conversions: "conversions",
+        events: "eventCount",
+        newUsers: "newUsers",
+        engagementRate: "engagementRate",
+        activeUsers: "activeUsers",
+      };
+
+      const dimensionMapping: Record<string, string> = {
+        date: "date",
+        hour: "hour",
+        page: "pagePathPlusQueryString",
+        device: "deviceCategory",
+        browser: "browser",
+        country: "country",
+        city: "city",
+        referrer: "sessionSource",
+        os: "operatingSystem",
+        language: "language",
+        eventType: "eventName",
+        week: "isoYearIsoWeek",
+        month: "yearMonth",
+      };
+
+      const unsupportedMetrics = metricsConfig.filter(m => !metricMapping[m]);
+      const unsupportedDimensions = dimensionsConfig.filter(d => !dimensionMapping[d]);
+
+      if (unsupportedMetrics.length > 0 || unsupportedDimensions.length > 0) {
+        const issues = [];
+        if (unsupportedMetrics.length > 0) issues.push(`Unsupported metrics for GA4: ${unsupportedMetrics.join(", ")}`);
+        if (unsupportedDimensions.length > 0) issues.push(`Unsupported dimensions for GA4: ${unsupportedDimensions.join(", ")}`);
+        return res.status(400).json({ message: issues.join(". ") + ". Please switch to myuserjourney data source for this report." });
+      }
+
+      const ga4Metrics = metricsConfig.map(m => ({ name: metricMapping[m] }));
+      const ga4Dimensions = dimensionsConfig.map(d => ({ name: dimensionMapping[d] }));
+
+      const ga4Report = await runGA4Report(accessToken, connection.propertyId, {
+        dateRanges: [{ startDate, endDate }],
+        dimensions: ga4Dimensions,
+        metrics: ga4Metrics,
+        limit: 500,
+        orderBys: ga4Dimensions.length > 0 ? [{ dimension: { dimensionName: ga4Dimensions[0].name, orderType: "ALPHANUMERIC" } }] : undefined,
+      });
+
+      const rows = (ga4Report.rows || []).map((row) => {
+        const item: Record<string, any> = {};
+        dimensionsConfig.forEach((dim, i) => {
+          item[dim] = row.dimensionValues[i]?.value || "";
+        });
+        metricsConfig.forEach((metric, i) => {
+          const val = row.metricValues[i]?.value || "0";
+          item[metric] = parseFloat(val);
+        });
+        return item;
+      });
+
+      res.json({ data: rows, source: "ga4" });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
