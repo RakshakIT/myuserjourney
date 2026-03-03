@@ -20,7 +20,7 @@ import {
 const securityFeatures = [
   {
     title: "Self-Hosted Architecture",
-    description: "Your data never leaves your infrastructure. Full control over storage, processing, and access. No third-party data processors involved.",
+    description: "Your analytics data stays in your database. Full control over storage, processing, and access. Optional integrations (geolocation, AI, payments) involve limited, configurable data exchange with third-party services under your control.",
     icon: Server,
   },
   {
@@ -74,7 +74,7 @@ export default function SecurityPage() {
               Secure, compliant data handling
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              My User Journey is built from the ground up with security and privacy at its core. Self-hosted means your data stays yours.
+              My User Journey is built from the ground up with security and privacy at its core. Self-hosted means your analytics data stays in your database, with full control over what is shared.
             </p>
           </div>
         </div>
