@@ -60,7 +60,7 @@ MyUserJourney proves that privacy compliance does not require sacrificing analyt
 - **Six-category consent management** with configurable layouts and third-party banner integration support.
 - **IP anonymisation** with last-octet zeroing, preserving geolocation accuracy without storing personal data.
 - **Executable data subject rights:** one-click erasure, JSON/CSV data portability, and per-category consent withdrawal.
-- **Self-hosted architecture** ensuring complete data sovereignty with no third-party data transfers.
+- **Self-hosted architecture** ensuring data sovereignty with core analytics data stored in the operator's own database. Optional integrations (geolocation, AI, payments) involve limited, configurable data exchange with third-party services under the operator's control.
 
 ---
 
