@@ -126,7 +126,7 @@ MyUserJourney eliminates this trade-off by combining in a **single self-hosted p
 - A complete CMS with contact forms and file management
 - Full GDPR/PECR compliance by design, not as an afterthought
 
-All self-hosted. All your data stays on your server.
+All self-hosted. Your analytics data stays in your database. Optional integrations (geolocation, AI, payments) involve limited, configurable data exchange with third-party services under your control.
 
 ---
 
